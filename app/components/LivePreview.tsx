@@ -25,7 +25,11 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
             <span
               className="live-glyph"
               key={`${letter}-${index}`}
-              style={{ marginRight: art.kerning }}
+              style={{
+                marginRight: art.kerning,
+                transform: `translate(${art.x ?? 0}%, ${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg) scale(${(art.scale ?? 100) / 100})`,
+                transformOrigin: "center",
+              }}
               dangerouslySetInnerHTML={{ __html: art.svg }}
             />
           ) : (

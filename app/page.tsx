@@ -2315,6 +2315,8 @@ export default function Home() {
               setBrickTool={setBrickTool}
               showGuides={showGuides}
               setShowGuides={setShowGuides}
+              showOnionSkin={showOnionSkin}
+              setShowOnionSkin={setShowOnionSkin}
               selectedGlyph={selectedGlyph}
               changeBrickSize={changeBrickSize}
               clearBrickGrid={clearBrickGrid}
@@ -2378,6 +2380,8 @@ export default function Home() {
                 showOnionSkin={showOnionSkin}
                 prevGlyphSvg={prevGlyphSvg}
                 nextGlyphSvg={nextGlyphSvg}
+                prevGlyphArt={prevGlyph ? glyphMap[prevGlyph] : undefined}
+                nextGlyphArt={nextGlyph ? glyphMap[nextGlyph] : undefined}
                 snapToGrid={snapToGrid}
                 gridSnapSize={gridSnapSize}
                 penType={penType}

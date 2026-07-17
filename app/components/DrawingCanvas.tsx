@@ -46,6 +46,8 @@ interface DrawingCanvasProps {
   showOnionSkin: boolean;
   prevGlyphSvg: string;
   nextGlyphSvg: string;
+  prevGlyphArt?: GlyphArt;
+  nextGlyphArt?: GlyphArt;
   snapToGrid: boolean;
   gridSnapSize: number;
   penType: "round" | "calligraphy" | "pointed";
@@ -96,6 +98,8 @@ export default function DrawingCanvas({
   showOnionSkin,
   prevGlyphSvg,
   nextGlyphSvg,
+  prevGlyphArt,
+  nextGlyphArt,
   snapToGrid,
   gridSnapSize,
   penType,
@@ -196,15 +200,35 @@ export default function DrawingCanvas({
                 <rect width="100" height="100" fill="url(#grid-snap-pattern)" style={{ pointerEvents: "none" }} />
               )}
               {showOnionSkin && prevGlyphSvg ? (
-                <g opacity={0.16} style={{ pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: prevGlyphSvg }} />
+                <g
+                  opacity={0.16}
+                  style={{
+                    pointerEvents: "none",
+                    transform: `translate(${prevGlyphArt?.x ?? 0}%, ${prevGlyphArt?.y ?? 0}%) rotate(${prevGlyphArt?.rotation ?? 0}deg) scale(${(prevGlyphArt?.scale ?? 100) / 100})`,
+                    transformOrigin: "center",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: prevGlyphSvg }}
+                />
               ) : null}
               {showOnionSkin && nextGlyphSvg ? (
-                <g opacity={0.08} style={{ pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: nextGlyphSvg }} />
+                <g
+                  opacity={0.08}
+                  style={{
+                    pointerEvents: "none",
+                    transform: `translate(${nextGlyphArt?.x ?? 0}%, ${nextGlyphArt?.y ?? 0}%) rotate(${nextGlyphArt?.rotation ?? 0}deg) scale(${(nextGlyphArt?.scale ?? 100) / 100})`,
+                    transformOrigin: "center",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: nextGlyphSvg }}
+                />
               ) : null}
               {selectedGlyph.svg ? (
                 <g
                   opacity={1}
-                  style={{ pointerEvents: "none" }}
+                  style={{
+                    pointerEvents: "none",
+                    transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
+                    transformOrigin: "center",
+                  }}
                   dangerouslySetInnerHTML={{ __html: selectedGlyph.svg }}
                 />
               ) : null}
@@ -366,6 +390,8 @@ export default function DrawingCanvas({
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 10,
+                    transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
+                    transformOrigin: "center",
                   }}
                   dangerouslySetInnerHTML={{ __html: selectedGlyph.svg }}
                 />
@@ -384,6 +410,8 @@ export default function DrawingCanvas({
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 9,
+                    transform: `translate(${prevGlyphArt?.x ?? 0}%, ${prevGlyphArt?.y ?? 0}%) rotate(${prevGlyphArt?.rotation ?? 0}deg) scale(${(prevGlyphArt?.scale ?? 100) / 100})`,
+                    transformOrigin: "center",
                   }}
                   dangerouslySetInnerHTML={{ __html: prevGlyphSvg }}
                 />
@@ -402,6 +430,8 @@ export default function DrawingCanvas({
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 9,
+                    transform: `translate(${nextGlyphArt?.x ?? 0}%, ${nextGlyphArt?.y ?? 0}%) rotate(${nextGlyphArt?.rotation ?? 0}deg) scale(${(nextGlyphArt?.scale ?? 100) / 100})`,
+                    transformOrigin: "center",
                   }}
                   dangerouslySetInnerHTML={{ __html: nextGlyphSvg }}
                 />

@@ -53,6 +53,8 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
                   width: `${fontSize}px`,
                   height: `${fontSize}px`,
                   marginRight: `${totalKern * (fontSize / 36)}px`, // scale spacing with font size
+                  transform: `translate(${art.x ?? 0}%, ${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg) scale(${(art.scale ?? 100) / 100})`,
+                  transformOrigin: "center",
                 }}
                 className="specimen-glyph"
                 dangerouslySetInnerHTML={{ __html: art.svg }}

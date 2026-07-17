@@ -6,6 +6,8 @@ interface BrickTypePanelProps {
   setBrickTool: (tool: "pencil" | "eraser") => void;
   showGuides: boolean;
   setShowGuides: (val: boolean) => void;
+  showOnionSkin: boolean;
+  setShowOnionSkin: (val: boolean) => void;
   selectedGlyph: GlyphArt;
   changeBrickSize: (size: number) => void;
   clearBrickGrid: () => void;
@@ -22,6 +24,8 @@ export default function BrickTypePanel({
   setBrickTool,
   showGuides,
   setShowGuides,
+  showOnionSkin,
+  setShowOnionSkin,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   selectedGlyph,
   changeBrickSize,
@@ -115,13 +119,24 @@ export default function BrickTypePanel({
           Redo
         </button>
       </div>
-      <button
-        className={`action-button ${showGuides ? "active yellow" : ""}`}
-        onClick={() => setShowGuides(!showGuides)}
-        title="Guides"
-      >
-        {showGuides ? t("hide_guides") : t("show_guides")}
-      </button>
+      <div style={{ display: "flex", gap: "6px" }}>
+        <button
+          className={`action-button ${showGuides ? "active yellow" : ""}`}
+          onClick={() => setShowGuides(!showGuides)}
+          style={{ flex: 1, minHeight: "36px", fontSize: "0.72rem", padding: 0 }}
+          title="Guides"
+        >
+          {showGuides ? "Guides On" : "Guides Off"}
+        </button>
+        <button
+          className={`action-button ${showOnionSkin ? "active yellow" : ""}`}
+          onClick={() => setShowOnionSkin(!showOnionSkin)}
+          style={{ flex: 1, minHeight: "36px", fontSize: "0.72rem", padding: 0 }}
+          title="Onion"
+        >
+          {showOnionSkin ? "Onion On" : "Onion Off"}
+        </button>
+      </div>
     </div>
   );
 }
