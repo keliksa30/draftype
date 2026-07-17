@@ -390,8 +390,6 @@ export default function DrawingCanvas({
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 10,
-                    transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
-                    transformOrigin: "center",
                   }}
                   dangerouslySetInnerHTML={{ __html: selectedGlyph.svg }}
                 />
@@ -410,8 +408,6 @@ export default function DrawingCanvas({
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 9,
-                    transform: `translate(${prevGlyphArt?.x ?? 0}%, ${prevGlyphArt?.y ?? 0}%) rotate(${prevGlyphArt?.rotation ?? 0}deg) scale(${(prevGlyphArt?.scale ?? 100) / 100})`,
-                    transformOrigin: "center",
                   }}
                   dangerouslySetInnerHTML={{ __html: prevGlyphSvg }}
                 />
@@ -430,8 +426,6 @@ export default function DrawingCanvas({
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 9,
-                    transform: `translate(${nextGlyphArt?.x ?? 0}%, ${nextGlyphArt?.y ?? 0}%) rotate(${nextGlyphArt?.rotation ?? 0}deg) scale(${(nextGlyphArt?.scale ?? 100) / 100})`,
-                    transformOrigin: "center",
                   }}
                   dangerouslySetInnerHTML={{ __html: nextGlyphSvg }}
                 />
