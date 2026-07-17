@@ -611,15 +611,7 @@ export default function Home() {
       const cleaned = cleanSvg(text);
       setUploadedImage("");
       setWorkingSvg(cleaned);
-      setGlyphMap((current) =>
-        applyAutoKerning({
-          ...current,
-          [activeGlyph]: {
-            ...(current[activeGlyph] ?? emptyGlyph()),
-            svg: cleaned,
-          },
-        }),
-      );
+      setGlyphMap((current) => applyNewSvgToMap(current, cleaned));
       setTraceStatus("SVG siap diedit");
       return;
     }
@@ -826,15 +818,7 @@ export default function Home() {
 
       const svg = makePixelSvg(rects, size);
       setWorkingSvg(svg);
-      setGlyphMap((current) =>
-        applyAutoKerning({
-          ...current,
-          [activeGlyph]: {
-            ...(current[activeGlyph] ?? emptyGlyph()),
-            svg,
-          },
-        }),
-      );
+      setGlyphMap((current) => applyNewSvgToMap(current, svg));
       setTraceStatus(`Autotraced ${rects.length} pixels`);
     } else {
       // Smooth Contour Autotrace (Marching Squares)
@@ -938,15 +922,7 @@ export default function Home() {
         " "
       )}" fill="currentColor" fill-rule="evenodd"/></svg>`;
       setWorkingSvg(svg);
-      setGlyphMap((current) =>
-        applyAutoKerning({
-          ...current,
-          [activeGlyph]: {
-            ...(current[activeGlyph] ?? emptyGlyph()),
-            svg,
-          },
-        }),
-      );
+      setGlyphMap((current) => applyNewSvgToMap(current, svg));
       setTraceStatus(`Contour traced ${paths.length} loops`);
     }
   };
@@ -1143,6 +1119,7 @@ export default function Home() {
 
     const svg = generateBrickSvg(newCells, size);
     setWorkingSvg(svg);
+    setGlyphMap((current) => applyNewSvgToMap(current, svg));
   };
 
   const changeBrickSize = (newSize: number) => {
@@ -1169,6 +1146,7 @@ export default function Home() {
 
     const svg = generateBrickSvg(newCells, newSize);
     setWorkingSvg(svg);
+    setGlyphMap((current) => applyNewSvgToMap(current, svg));
   };
 
   const clearBrickGrid = () => {
@@ -1181,6 +1159,7 @@ export default function Home() {
     pushBrickHistory(newGrid, current);
     const svg = generateBrickSvg(newCells, size);
     setWorkingSvg(svg);
+    setGlyphMap((current) => applyNewSvgToMap(current, svg));
   };
 
   const fillBrickGrid = () => {
@@ -1193,6 +1172,7 @@ export default function Home() {
     pushBrickHistory(newGrid, current);
     const svg = generateBrickSvg(newCells, size);
     setWorkingSvg(svg);
+    setGlyphMap((current) => applyNewSvgToMap(current, svg));
   };
 
   const commitBrickToGlyph = () => {
