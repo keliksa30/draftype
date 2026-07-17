@@ -1,98 +1,111 @@
-# vinext-starter
+# 🎨 DrafType - Custom Font Builder
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+> **Bikin Font Ga Pernah Semudah Ini!**  
+> *Making custom fonts has never been this easy.*
 
-## Prerequisites
+DrafType is a powerful, interactive, and user-friendly web application designed to help creators, designers, and developers craft custom fonts directly in the browser. Whether you want to trace images, draw freehand calligraphy, or design retro pixel-art characters, DrafType provides all the tools you need and lets you export your creations as standard `.otf` or `.ttf` font files.
 
-- Node.js `>=22.13.0`
+---
 
-## Quick Start
+## 🚀 Key Features
 
-```bash
-npm install
-npm run dev
-npm run build
+DrafType supports three unique creative modes designed to fit different design styles:
+
+### 1. 🔍 TypeTapToe Mode (Image & SVG Tracing)
+*   **Image Tracing:** Upload images/photos of letters, adjust threshold settings, and trace them into clean vector glyph paths.
+*   **SVG Import:** Drag-and-drop raw SVG files to convert vector drawings directly into character paths.
+*   **Font Editor:** Upload an existing `.ttf` or `.otf` font file to modify its characters and re-export.
+
+### 2. ✍️ FingerType Mode (Freehand Drawing)
+*   **Brush & Pen Tools:** Draw vector paths using smooth brush strokes or precise vector pen anchor points.
+*   **Smoothness Controls:** Automatically neatens and smooths rough mouse or touchscreen paths.
+*   **Path Customization:** Toggle between Calligraphy or Pointed pen styles, adjust brush size, and utilize reference backgrounds.
+
+### 3. 🧱 BrickType Mode (Retro & Pixel Art)
+*   **Grid Editor:** Easily design retro pixel fonts by placing blocks on an interactive grid.
+*   **Grid Scaling:** Customize grid dimensions and block offsets.
+*   **Autofill & Clear:** Powerful pixel manipulations for drawing symmetry.
+
+### 4. 🎛️ Utility & Playground Features
+*   **Kerning Pairs Editor:** Manually adjust the spacing between specific character combinations (e.g., "AV", "LT").
+*   **Live Preview Specimen:** Test your font in a real-time text playground with sentence templates, line heights, and size controls.
+*   **Auto-Save & Draft Backups:** Integrated IndexedDB support saves your work local to the browser so you never lose your progress.
+
+---
+
+## 🛠️ System Architecture
+
+DrafType is built as a React-based client-side application running on Next.js/Vite (powered by the Vinext/Cloudflare ecosystem).
+
+```mermaid
+graph TD
+    A[User Interface] --> B[Mode Selector]
+    B --> C[TypeTapToe: Tracing & Import]
+    B --> D[FingerType: Freehand Draw Canvas]
+    B --> E[BrickType: Pixel Grid]
+    
+    C & D & E --> F[Glyph Manager]
+    F --> G[IndexedDB Local Auto-Save]
+    F --> H[Kerning & Path Neatener]
+    F --> I[Export Engine: opentype.js]
+    I --> J[Downloaded OTF/TTF Font]
 ```
 
-This starter does not use `wrangler.jsonc`.
+---
 
-## Included Shape
+## 💻 Local Development
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+### Prerequisites
+*   Node.js `>= 22.13.0`
+*   `npm` or `pnpm` package manager
 
-## Workspace Auth Headers
+### Getting Started
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/keliksa30/draftype.git
+    cd draftype
+    ```
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+2.  **Install Dependencies:**
+    ```bash
+    npm install
+    # or
+    pnpm install
+    ```
 
-Treat the full name as optional and fall back to email when it is absent:
+3.  **Start the Local Dev Server:**
+    ```bash
+    npm run dev
+    # or
+    pnpm dev
+    ```
+    Open `http://localhost:3000` or the terminal-indicated port to run the app.
 
-```tsx
-import { headers } from "next/headers";
+4.  **Production Build:**
+    ```bash
+    npm run build
+    ```
 
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
+---
 
-  const displayName = fullName ?? email;
-  // ...
-}
-```
+## 📁 Tech Stack
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+*   **Frontend Core:** React, TypeScript, Next.js, HTML5 Canvas
+*   **Styling:** Vanilla CSS (including custom premium dark mode themes)
+*   **Local Storage:** IndexedDB (via custom hooks)
+*   **Font Generation:** `opentype.js` (for parsing, manipulating, and writing OTF/TTF binaries)
+*   **Hosting/Backend Platform:** Cloudflare Pages with Vinext full-stack bindings
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+---
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+## 📜 Commands Reference
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+*   `npm run dev` - Starts the development server.
+*   `npm run build` - Validates the Vinext production build.
+*   `npm test` - Runs test suites.
+*   `npm run db:generate` - Generates Drizzle migrations for DB schemas if Cloudflare D1 integration is enabled.
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+---
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+*Crafted with 🖤 by [keliksa30](https://github.com/keliksa30).*
