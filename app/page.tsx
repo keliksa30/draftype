@@ -290,7 +290,6 @@ export default function Home() {
   const glyphStripRef = useRef<HTMLDivElement | null>(null);
   const panStartRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const moveStartRef = useRef<{ x: number; y: number } | null>(null);
-  const drawingThrottleRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (mode === "brickType" && selectedGlyph?.svg) {
@@ -1548,12 +1547,6 @@ export default function Home() {
     setPenPreviewPoint(point);
     if (!isDrawing) return;
 
-    if (drawingThrottleRef.current) return;
-    drawingThrottleRef.current = true;
-    requestAnimationFrame(() => {
-      drawingThrottleRef.current = false;
-    });
-
     if (drawTool === "line" || drawTool === "rect" || drawTool === "ellipse") {
       setShapePreview(point);
       return;
@@ -1596,7 +1589,13 @@ export default function Home() {
       return;
     }
     if (drawTool === "brush") {
-      setDrawPoints((points) => [...points, { ...point, move: false }]);
+      setDrawPoints((points) => {
+        const last = points[points.length - 1];
+        if (last && Math.hypot(point.x - last.x, point.y - last.y) < 0.3) {
+          return points;
+        }
+        return [...points, { ...point, move: false }];
+      });
     }
   };
 

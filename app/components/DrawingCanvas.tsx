@@ -1,4 +1,4 @@
-import { PointerEvent, RefObject } from "react";
+import { PointerEvent, RefObject, useEffect } from "react";
 import { Mode, DrawTool, DrawPoint, GlyphArt, BrickGrid } from "./types";
 import { fingerTools, getToolIcon, getCalligraphyPath, getPointedPath } from "./constants";
 
@@ -101,6 +101,25 @@ export default function DrawingCanvas({
   penType,
   penAngle,
 }: DrawingCanvasProps) {
+  useEffect(() => {
+    const svg = drawingRef.current;
+    if (!svg) return;
+
+    const preventScroll = (e: TouchEvent) => {
+      if (mode === "fingertype" && drawTool !== "hand") {
+        e.preventDefault();
+      }
+    };
+
+    svg.addEventListener("touchstart", preventScroll, { passive: false });
+    svg.addEventListener("touchmove", preventScroll, { passive: false });
+
+    return () => {
+      svg.removeEventListener("touchstart", preventScroll);
+      svg.removeEventListener("touchmove", preventScroll);
+    };
+  }, [drawingRef, mode, drawTool]);
+
   return (
     <>
       <div className="board-header">

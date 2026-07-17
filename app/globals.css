@@ -1640,6 +1640,7 @@ html.dark .sidebar-tab:hover {
   user-select: none;
   box-shadow: 4px 4px 0 var(--line);
   border-radius: 4px;
+  touch-action: none;
 }
 
 .brick-cell {
