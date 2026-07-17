@@ -98,6 +98,7 @@ export default function Home() {
   });
   const [previewText, setPreviewText] = useState("DrafType");
   const [exportStatus, setExportStatus] = useState("Ready to export");
+  const [exportSpacingMode, setExportSpacingMode] = useState<"proportional" | "monospace">("proportional");
   const [glyphScroll, setGlyphScroll] = useState(0);
   const [magicLoading, setMagicLoading] = useState<MagicAction | null>(null);
   const [revertGlyphMap, setRevertGlyphMap] = useState<Record<string, GlyphArt> | null>(null);
@@ -1791,6 +1792,9 @@ export default function Home() {
     const rotate = (art.rotation * Math.PI) / 180;
     const centerX = viewWidth / 2;
     const centerY = viewHeight / 2;
+    // xShift: move path left so leftmost pixel aligns with desired LSB
+    // In proportional mode, caller computes this. In monospace mode it's 0.
+    const xShift = (art as GlyphArt & { _xShift?: number })._xShift ?? 0;
 
     const transform = (x: number, y: number) => {
       const rx = x - centerX;
@@ -1798,7 +1802,7 @@ export default function Home() {
       const tx = rx * Math.cos(rotate) - ry * Math.sin(rotate) + centerX;
       const ty = rx * Math.sin(rotate) + ry * Math.cos(rotate) + centerY;
       return {
-        x: 150 + (tx - viewParts[0]) * scale + art.x * 5,
+        x: 150 + xShift + (tx - viewParts[0]) * scale + art.x * 5,
         y: 790 - (ty - viewParts[1]) * scale - art.y * 5,
       };
     };
@@ -2169,14 +2173,39 @@ export default function Home() {
         const art = glyphMap[glyph] ?? emptyGlyph();
         const bounds = getGlyphBounds(art.svg);
         const unitsPerGrid = 1000 / (bounds.gridWidth || 16);
-        const advanceWidth = bounds.isEmpty
-          ? 650
-          : Math.round((bounds.maxX - bounds.minX + 2) * unitsPerGrid) + (art.kerning ?? 0) * 4;
+        // The "natural" left side bearing in OTF space = minX * scale_in_makeExportPath
+        // makeExportPath uses: x = 150 + (tx) * scale, where tx comes from the grid coords
+        // So the natural left edge of pixels = 150 + minX * glyphScale
+        // glyphScale = (art.scale/100) * (700 / max(viewWidth,viewHeight))
+        const glyphScaleFactor = (art.scale / 100) * (700 / Math.max(bounds.gridWidth, bounds.gridHeight, 1));
+        // Natural left position of first pixel in OTF units
+        const naturalLeft = 150 + bounds.minX * glyphScaleFactor;
+        // Desired left side bearing = 1 grid pixel in OTF units
+        const desiredLSB = 1 * glyphScaleFactor;
+        // xShift moves the path so first pixel starts at desiredLSB from origin
+        const xShiftProportional = desiredLSB - naturalLeft;
+
+        let advanceWidth: number;
+        let artWithShift: GlyphArt & { _xShift?: number };
+
+        if (exportSpacingMode === "monospace") {
+          // Fixed advance: full grid width in OTF units (classic pixel/monospace look)
+          advanceWidth = Math.round(unitsPerGrid * bounds.gridWidth);
+          artWithShift = { ...art, _xShift: 0 };
+        } else {
+          // Proportional: advance = LSB + content + RSB (1 grid pixel each side)
+          const contentWidthOTF = (bounds.maxX - bounds.minX) * glyphScaleFactor;
+          advanceWidth = bounds.isEmpty
+            ? 650
+            : Math.round(desiredLSB + contentWidthOTF + desiredLSB) + (art.kerning ?? 0) * 4;
+          artWithShift = { ...art, _xShift: xShiftProportional };
+        }
+
         return new opentype.Glyph({
           name: `glyph-${glyph.charCodeAt(0)}`,
           unicode: glyph.charCodeAt(0),
-          advanceWidth,
-          path: art.svg ? makeExportPath(opentype, art, glyph) : undefined,
+          advanceWidth: Math.max(100, advanceWidth),
+          path: art.svg ? makeExportPath(opentype, artWithShift, glyph) : undefined,
         });
       }),
     ];
@@ -2486,6 +2515,8 @@ export default function Home() {
                 magicLoading={magicLoading}
                 runMagic={runMagic}
                 exportFont={exportFont}
+                exportSpacingMode={exportSpacingMode}
+                setExportSpacingMode={setExportSpacingMode}
                 t={t}
               />
             </>

@@ -16,6 +16,8 @@ interface ExportPanelProps {
   magicLoading: MagicAction | null;
   runMagic: (action: MagicAction, task: () => void | Promise<void>) => Promise<void>;
   exportFont: (format: "otf" | "ttf") => Promise<void>;
+  exportSpacingMode: "proportional" | "monospace";
+  setExportSpacingMode: (val: "proportional" | "monospace") => void;
   t: (key: string) => string;
 }
 
@@ -34,6 +36,8 @@ export default function ExportPanel({
   magicLoading,
   runMagic,
   exportFont,
+  exportSpacingMode,
+  setExportSpacingMode,
   t,
 }: ExportPanelProps) {
   const magicContent = makeMagicContent(magicLoading);
@@ -86,6 +90,46 @@ export default function ExportPanel({
         </label>
       </div>
 
+      {/* Spacing mode toggle */}
+      <div style={{ marginTop: "14px" }}>
+        <p className="kicker" style={{ margin: "0 0 6px" }}>Spacing mode</p>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <button
+            className={`action-button${exportSpacingMode === "proportional" ? " active" : ""}`}
+            style={{
+              flex: 1,
+              fontSize: "0.78rem",
+              padding: "6px 8px",
+              opacity: exportSpacingMode === "proportional" ? 1 : 0.5,
+              fontWeight: exportSpacingMode === "proportional" ? "bold" : "normal",
+            }}
+            onClick={() => setExportSpacingMode("proportional")}
+            title="Each character has advance width based on its actual pixel width + 1px sidebearing. Best for most uses."
+          >
+            ⟷ Proportional
+          </button>
+          <button
+            className={`action-button${exportSpacingMode === "monospace" ? " active" : ""}`}
+            style={{
+              flex: 1,
+              fontSize: "0.78rem",
+              padding: "6px 8px",
+              opacity: exportSpacingMode === "monospace" ? 1 : 0.5,
+              fontWeight: exportSpacingMode === "monospace" ? "bold" : "normal",
+            }}
+            onClick={() => setExportSpacingMode("monospace")}
+            title="All characters share the same fixed advance width. Classic pixel/typewriter look."
+          >
+            ☰ Monospace
+          </button>
+        </div>
+        <p style={{ margin: "5px 0 0", fontSize: "0.72rem", opacity: 0.6, lineHeight: 1.3 }}>
+          {exportSpacingMode === "proportional"
+            ? "Spasi proporsional — setiap huruf menggunakan lebar sesuai kontennya"
+            : "Spasi tetap — semua huruf sama lebar (monospace/typewriter)"}
+        </p>
+      </div>
+
       <div className="button-row" style={{ marginTop: "16px" }}>
         <button
           className="action-button magic-button yellow"
@@ -108,3 +152,4 @@ export default function ExportPanel({
     </div>
   );
 }
+
