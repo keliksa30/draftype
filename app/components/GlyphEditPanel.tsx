@@ -11,6 +11,7 @@ interface GlyphEditPanelProps {
   autoKern: () => void;
   autoNeat: () => void;
   revertAutoEdit: () => void;
+  applyTransformsToAll?: () => void;
   t: (key: string) => string;
 }
 
@@ -24,6 +25,7 @@ export default function GlyphEditPanel({
   autoKern,
   autoNeat,
   revertAutoEdit,
+  applyTransformsToAll,
   t,
 }: GlyphEditPanelProps) {
   const magicContent = makeMagicContent(magicLoading);
@@ -142,6 +144,16 @@ export default function GlyphEditPanel({
         >
           {t("reset_all_btn")}
         </button>
+        {applyTransformsToAll && (
+          <button
+            className="action-button"
+            onClick={applyTransformsToAll}
+            style={{ marginTop: "8px", width: "100%", background: "var(--teal)", color: "var(--white)", borderColor: "var(--line)" }}
+            title={t("apply_to_all_btn")}
+          >
+            {t("apply_to_all_btn")}
+          </button>
+        )}
       </div>
     </>
   );

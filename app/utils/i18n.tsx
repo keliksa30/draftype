@@ -360,6 +360,10 @@ export const translations: TranslationDict = {
     id: "Balik ke Pengaturan Awal",
     en: "Reset Transforms"
   },
+  apply_to_all_btn: {
+    id: "Terapkan ke Semua",
+    en: "Apply to All"
+  },
   // ExportPanel
   font_name: {
     id: "Nama Font-mu",

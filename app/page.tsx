@@ -39,6 +39,7 @@ import {
   pointsFromSvg,
   applyAutoKerning,
   applyAutoNeatMap,
+  getGlyphWidth,
   loadSvgToBrickGrid,
   readFileAsDataUrl,
   getCalligraphyPath,
@@ -1721,6 +1722,26 @@ export default function Home() {
     pushGlobalHistory("Auto Neat Semua Huruf", nextGlyphMap);
   };
 
+  const applyTransformsToAll = () => {
+    setRevertGlyphMap(glyphMap);
+    const activeArt = glyphMap[activeGlyph] ?? emptyGlyph();
+    const nextGlyphMap = { ...glyphMap };
+    glyphs.forEach((glyph) => {
+      const item = nextGlyphMap[glyph] ?? emptyGlyph();
+      nextGlyphMap[glyph] = {
+        ...item,
+        scale: activeArt.scale,
+        x: activeArt.x,
+        y: activeArt.y,
+        rotation: activeArt.rotation,
+        kerning: activeArt.kerning,
+      };
+    });
+    setGlyphMap(nextGlyphMap);
+    pushGlobalHistory("Terapkan Setelan Ke Semua Huruf", nextGlyphMap);
+    setExportStatus("Setelan diterapkan ke semua huruf!");
+  };
+
   const revertAutoEdit = () => {
     if (!revertGlyphMap) {
       setTraceStatus("Nothing to revert");
@@ -2149,7 +2170,7 @@ export default function Home() {
         return new opentype.Glyph({
           name: `glyph-${glyph.charCodeAt(0)}`,
           unicode: glyph.charCodeAt(0),
-          advanceWidth: 650 + art.kerning * 4,
+          advanceWidth: Math.round((getGlyphWidth(art.svg, 65) / 100) * 1000) + art.kerning * 4,
           path: art.svg ? makeExportPath(opentype, art, glyph) : undefined,
         });
       }),
@@ -2442,6 +2463,7 @@ export default function Home() {
                 autoKern={autoKern}
                 autoNeat={autoNeat}
                 revertAutoEdit={revertAutoEdit}
+                applyTransformsToAll={applyTransformsToAll}
                 t={t}
               />
               <ExportPanel

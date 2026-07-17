@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { GlyphArt } from "./types";
+import { getGlyphWidth } from "./constants";
 
 interface SpecimenPlaygroundProps {
   glyphMap: Record<string, GlyphArt>;
@@ -50,7 +51,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
                 key={`letter-${letterIdx}`}
                 style={{
                   display: "inline-block",
-                  width: `${fontSize}px`,
+                  width: `${(getGlyphWidth(art.svg) / 100) * fontSize}px`,
                   height: `${fontSize}px`,
                   marginRight: `${totalKern * (fontSize / 36)}px`, // scale spacing with font size
                   transform: `translate(${art.x ?? 0}%, ${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg) scale(${(art.scale ?? 100) / 100})`,

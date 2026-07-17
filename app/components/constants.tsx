@@ -308,6 +308,57 @@ export const pointsFromSvg = (svgString: string): DrawPoint[] => {
   return points;
 };
 
+export const getGlyphWidth = (svgString: string | undefined, defaultWidth = 65): number => {
+  if (!svgString) return defaultWidth;
+
+  // Server-side / SSR fallback
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    const matchesX = [...svgString.matchAll(/x=["'](-?\d+(?:\.\d+)?)["']/g)].map((m) => parseFloat(m[1]));
+    const dMatches = [...svgString.matchAll(/d=["']([^"']+)["']/g)];
+    const pathCoords: number[] = [];
+    dMatches.forEach((m) => {
+      const numbers = m[1].match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+      numbers.forEach((num, idx) => {
+        if (idx % 2 === 0) pathCoords.push(num);
+      });
+    });
+
+    const allX = [...matchesX, ...pathCoords];
+    if (allX.length === 0) return defaultWidth;
+
+    const viewBoxAttr = svgString.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
+    let scaleX = 1;
+    if (viewBoxAttr) {
+      const w = parseFloat(viewBoxAttr[1]);
+      if (w > 0) scaleX = 100 / w;
+    }
+
+    const scaledX = allX.map((x) => x * scaleX);
+    const minX = Math.min(...scaledX);
+    const maxX = Math.max(...scaledX);
+
+    const contentWidth = maxX - minX;
+    if (contentWidth <= 0 || contentWidth > 100) return defaultWidth;
+
+    const padding = 10;
+    return Math.min(100, Math.max(25, contentWidth + padding));
+  }
+
+  // Client-side: use DOMParser via pointsFromSvg
+  const pts = pointsFromSvg(svgString);
+  if (pts.length === 0) return defaultWidth;
+
+  const xs = pts.map((p) => p.x);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+
+  const contentWidth = maxX - minX;
+  if (contentWidth <= 0 || contentWidth > 100) return defaultWidth;
+
+  const padding = 10;
+  return Math.min(100, Math.max(25, contentWidth + padding));
+};
+
 const kerningForGlyph = (glyph: string): number => {
   if ("ilI1!|.".includes(glyph)) return -6;
   if (":;,".includes(glyph)) return -4;

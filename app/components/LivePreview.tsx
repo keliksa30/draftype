@@ -1,4 +1,5 @@
 import { GlyphArt } from "./types";
+import { getGlyphWidth } from "./constants";
 
 interface LivePreviewProps {
   previewText: string;
@@ -26,6 +27,7 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
               className="live-glyph"
               key={`${letter}-${index}`}
               style={{
+                width: `${(getGlyphWidth(art.svg) / 100) * 58}px`,
                 marginRight: art.kerning,
                 transform: `translate(${art.x ?? 0}%, ${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg) scale(${(art.scale ?? 100) / 100})`,
                 transformOrigin: "center",
