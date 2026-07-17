@@ -1,0 +1,315 @@
+/* ── Dark Mode ─────────────────────────────────────────────────────────────── */
+html.dark {
+  color-scheme: dark;
+  --paper: #090a0f;
+  --ink: #cbd5e1; /* slate-300: soft, premium, very readable text */
+  --line: #12131a; /* Dark charcoal for borders and solid shadows, no glowing white */
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --teal: #14b8a6;
+  --blue: #3b82f6;
+  --mint: #064e3b;
+  --cream: #2d2305;
+  --white: #161824; /* Panel backgrounds */
+}
+
+/* Base background & grid */
+html.dark body {
+  background:
+    linear-gradient(90deg, rgba(203, 213, 225, 0.03) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(203, 213, 225, 0.03) 1px, transparent 1px),
+    var(--paper);
+  background-size: 24px 24px;
+  color: var(--ink);
+}
+
+/* Logo inversion */
+html.dark .topbar-logo {
+  filter: brightness(0) invert(1);
+}
+
+/* Panel Backgrounds */
+html.dark .topbar {
+  background: var(--white);
+}
+
+html.dark .workspace {
+  background: #090a0f;
+}
+
+html.dark .tool-panel,
+html.dark .glyph-board,
+html.dark .edit-panel {
+  background: var(--white);
+}
+
+/* Cards & Tracing */
+html.dark .upload-card {
+  background: #1c1e2b;
+}
+
+html.dark .upload-choice.image-upload {
+  background: #064e3b;
+}
+
+html.dark .upload-choice.svg-upload {
+  background: #121729;
+}
+
+html.dark .upload-choice:hover {
+  background: var(--yellow);
+  color: #0f1117;
+}
+
+html.dark .mini-status {
+  background: #064e3b;
+}
+
+/* Buttons */
+html.dark .action-button {
+  background: #232640;
+  color: var(--ink);
+}
+
+html.dark .action-button:hover {
+  background: var(--yellow);
+  color: #0f1117;
+}
+
+html.dark .action-button.yellow {
+  background: var(--yellow);
+  color: #0f1117;
+}
+
+html.dark .action-button.teal {
+  background: var(--teal);
+  color: #0f1117;
+}
+
+/* Mode Buttons */
+html.dark .mode-btn {
+  background: #232640 !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+  box-shadow: 4px 4px 0 var(--line) !important;
+}
+
+html.dark .mode-btn img {
+  filter: brightness(0) invert(1) !important;
+}
+
+html.dark .mode-btn:hover {
+  background: #2d3152 !important;
+}
+
+html.dark .mode-btn.active {
+  background: var(--yellow) !important;
+  color: #0f1117 !important;
+  box-shadow: 2px 2px 0 var(--line) !important;
+}
+
+html.dark .mode-btn.active img {
+  filter: brightness(0) !important;
+}
+
+/* Guide Cards */
+html.dark .guide-card {
+  background: #082d27;
+  color: var(--teal);
+}
+
+html.dark .guide-card strong,
+html.dark .guide-card span {
+  color: #ccfbf6;
+}
+
+html.dark .trace-box {
+  background: var(--white);
+  border-color: var(--line);
+}
+
+html.dark .slider-row {
+  background: #1c1e2b;
+  border-color: var(--line);
+}
+
+html.dark .canvas-place-button {
+  background: var(--teal);
+  color: #0f1117;
+  border-color: var(--line);
+}
+
+html.dark .canvas-place-button:hover {
+  background: var(--yellow);
+}
+
+/* Glyph Board */
+html.dark .glyph-cell {
+  background: var(--white);
+  border-color: rgba(203, 213, 225, 0.12);
+}
+
+html.dark .glyph-cell:hover {
+  background: #202336;
+}
+
+html.dark .glyph-cell.selected {
+  background: var(--yellow);
+  color: #0f1117;
+}
+
+html.dark .glyph-cell.filled {
+  border-color: var(--teal);
+}
+
+/* Live Card */
+html.dark .live-card {
+  background: var(--white);
+  border-color: var(--line);
+}
+
+html.dark .live-card input {
+  background: #1c1e2b;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+html.dark .live-fallback {
+  color: rgba(203, 213, 225, 0.4);
+}
+
+/* Export Card */
+html.dark .export-card {
+  background: var(--white);
+  border-color: var(--line);
+}
+
+html.dark .export-card input,
+html.dark .metadata-grid input {
+  background: #1c1e2b;
+  color: var(--ink);
+  border-color: rgba(203, 213, 225, 0.2);
+}
+
+html.dark .control-stack .slider-row input[type="range"] {
+  accent-color: var(--teal);
+}
+
+html.dark .glyph-stage {
+  background: #090a0f;
+}
+
+html.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+html.dark .modal-content {
+  background: var(--white);
+  border-color: var(--line);
+}
+
+html.dark .draw-bg {
+  fill: var(--white);
+}
+
+html.dark .brick-cell {
+  background: var(--white);
+  border-color: rgba(203, 213, 225, 0.06);
+}
+
+html.dark .brick-cell.active {
+  background: var(--ink);
+}
+
+html.dark .glyph-arrow {
+  background: var(--white);
+  border-color: var(--line);
+}
+
+html.dark .glyph-scroll input[type="range"] {
+  accent-color: var(--teal);
+}
+
+html.dark .mode-label {
+  background: var(--yellow);
+  color: #0f1117;
+}
+
+html.dark .board-header {
+  background: var(--white);
+  border-color: var(--line);
+}
+
+/* Dark mode toggle button and container styles */
+.dark-mode-dock {
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.dark-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 3px solid var(--line);
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--white);
+  box-shadow: 4px 4px 0 var(--line);
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+html.dark .dark-toggle-btn {
+  background: #232640;
+  color: var(--ink);
+  border-color: var(--line);
+  box-shadow: 4px 4px 0 var(--line);
+}
+
+html.dark .dark-toggle-btn:hover {
+  background: #2d3152;
+}
+
+/* Readability fixes for dark mode */
+html.dark .upload-choice small {
+  color: rgba(203, 213, 225, 0.6) !important;
+}
+
+html.dark .upload-choice:hover span,
+html.dark .upload-choice:hover small {
+  color: #151820 !important;
+}
+
+html.dark .glyph-select-header {
+  color: var(--ink) !important;
+}
+
+html.dark .export-card input::placeholder,
+html.dark .metadata-grid input::placeholder,
+html.dark .live-card input::placeholder {
+  color: rgba(203, 213, 225, 0.4) !important;
+}
+
+html.dark .live-fallback {
+  color: rgba(203, 213, 225, 0.35) !important;
+}
+
+html.dark .topbar p {
+  color: #151820 !important;
+}
+
+html.dark .stats-card,
+html.dark .stats-card span,
+html.dark .stats-card strong,
+html.dark .stats-card p,
+html.dark .stats-card small {
+  color: #151820 !important;
+}
+
+html.dark .action-button:hover .font-import-icon {
+  filter: brightness(0) !important;
+}
