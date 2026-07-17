@@ -308,56 +308,97 @@ export const pointsFromSvg = (svgString: string): DrawPoint[] => {
   return points;
 };
 
-export const getGlyphWidth = (svgString: string | undefined, defaultWidth = 65): number => {
-  if (!svgString) return defaultWidth;
+// ─── Bounding box extraction (works on SSR via regex) ────────────────────────
 
-  // Server-side / SSR fallback
-  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
-    const matchesX = [...svgString.matchAll(/x=["'](-?\d+(?:\.\d+)?)["']/g)].map((m) => parseFloat(m[1]));
-    const dMatches = [...svgString.matchAll(/d=["']([^"']+)["']/g)];
-    const pathCoords: number[] = [];
-    dMatches.forEach((m) => {
-      const numbers = m[1].match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-      numbers.forEach((num, idx) => {
-        if (idx % 2 === 0) pathCoords.push(num);
-      });
-    });
+export interface GlyphBounds {
+  minX: number;
+  maxX: number;
+  gridWidth: number;
+  gridHeight: number;
+  isEmpty: boolean;
+}
 
-    const allX = [...matchesX, ...pathCoords];
-    if (allX.length === 0) return defaultWidth;
+export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
+  const fallback: GlyphBounds = { minX: 0, maxX: 16, gridWidth: 16, gridHeight: 16, isEmpty: true };
+  if (!svgString || !svgString.trim()) return fallback;
 
-    const viewBoxAttr = svgString.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
-    let scaleX = 1;
-    if (viewBoxAttr) {
-      const w = parseFloat(viewBoxAttr[1]);
-      if (w > 0) scaleX = 100 / w;
+  const vbMatch = svgString.match(/viewBox=["']0\s+0\s+([\d.]+)\s+([\d.]+)["']/i);
+  const gridWidth = vbMatch ? parseFloat(vbMatch[1]) : 16;
+  const gridHeight = vbMatch ? parseFloat(vbMatch[2]) : 16;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+
+  // Regex-based extraction — works for both SSR and client
+  for (const m of svgString.matchAll(/<rect[^>]*?>/g)) {
+    const rectStr = m[0];
+    const xm = rectStr.match(/\bx=["'](-?[\d.]+)["']/);
+    const wm = rectStr.match(/\bwidth=["']([\d.]+)["']/);
+    if (xm && wm) {
+      const x = parseFloat(xm[1]);
+      const w = parseFloat(wm[1]);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x + w);
     }
-
-    const scaledX = allX.map((x) => x * scaleX);
-    const minX = Math.min(...scaledX);
-    const maxX = Math.max(...scaledX);
-
-    const contentWidth = maxX - minX;
-    if (contentWidth <= 0 || contentWidth > 100) return defaultWidth;
-
-    const padding = 10;
-    return Math.min(100, Math.max(25, contentWidth + padding));
   }
 
-  // Client-side: use DOMParser via pointsFromSvg
-  const pts = pointsFromSvg(svgString);
-  if (pts.length === 0) return defaultWidth;
+  // Handle path-based glyphs (e.g. autotrace results)
+  for (const m of svgString.matchAll(/\b[MLHVCSQTAml]\s*(-?[\d.]+)/g)) {
+    const val = parseFloat(m[1]);
+    if (!isNaN(val) && val >= 0 && val <= gridWidth * 2) {
+      minX = Math.min(minX, val);
+      maxX = Math.max(maxX, val);
+    }
+  }
 
-  const xs = pts.map((p) => p.x);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
+  if (minX === Infinity || maxX === -Infinity || maxX <= minX) {
+    return fallback;
+  }
 
-  const contentWidth = maxX - minX;
-  if (contentWidth <= 0 || contentWidth > 100) return defaultWidth;
-
-  const padding = 10;
-  return Math.min(100, Math.max(25, contentWidth + padding));
+  return { minX, maxX, gridWidth, gridHeight, isEmpty: false };
 };
+
+// ─── Crop SVG viewBox to just the active pixel region + sidebearing ───────────
+// This is the KEY function for proper advance-width rendering.
+// Returns a modified SVG string with a narrower viewBox and the width ratio.
+
+export const cropSvgToAdvance = (
+  svgString: string | undefined,
+  sidebearing = 1.0,  // in grid units (e.g. 1 = 1px on 16px grid)
+): { svg: string; widthRatio: number } => {
+  const fallback = { svg: svgString ?? "", widthRatio: 0.65 };
+  if (!svgString) return fallback;
+
+  const bounds = getGlyphBounds(svgString);
+  if (bounds.isEmpty) return fallback;
+
+  const viewMinX = bounds.minX - sidebearing;
+  const viewWidth = (bounds.maxX - bounds.minX) + sidebearing * 2;
+
+  // Replace existing viewBox with the cropped one
+  const croppedSvg = svgString.replace(
+    /viewBox=["'][^"']*["']/,
+    `viewBox="${viewMinX.toFixed(2)} 0 ${viewWidth.toFixed(2)} ${bounds.gridHeight}"`,
+  );
+
+  const widthRatio = viewWidth / bounds.gridHeight; // aspect ratio of cropped region
+
+  return { svg: croppedSvg, widthRatio };
+};
+
+// ─── Legacy helper kept for font export ──────────────────────────────────────
+
+export const getGlyphWidth = (svgString: string | undefined, defaultWidth = 65): number => {
+  const bounds = getGlyphBounds(svgString);
+  if (bounds.isEmpty) return defaultWidth;
+  const sidebearing = 1;
+  const contentPlusGap = bounds.maxX - bounds.minX + sidebearing * 2;
+  // Normalise to [0,100] range (as fraction of gridWidth)
+  const ratio = Math.min(1, Math.max(0.25, contentPlusGap / bounds.gridWidth));
+  return ratio * 100;
+};
+
+
 
 const kerningForGlyph = (glyph: string): number => {
   if ("ilI1!|.".includes(glyph)) return -6;
@@ -371,14 +412,14 @@ const kerningForGlyph = (glyph: string): number => {
 };
 
 export const applyAutoKerning = (map: Record<string, GlyphArt>): Record<string, GlyphArt> => {
+  // With cropSvgToAdvance, advance width is computed from bounding box,
+  // so kerning should be 0 for all glyphs by default.
+  // Manual kerning via the slider is still respected.
   const next = { ...map };
   glyphs.forEach((glyph) => {
     const item = next[glyph];
     if (!item?.svg) return;
-    next[glyph] = {
-      ...item,
-      kerning: kerningForGlyph(glyph),
-    };
+    next[glyph] = { ...item, kerning: 0 };
   });
   return next;
 };

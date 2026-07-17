@@ -1,11 +1,14 @@
 import { GlyphArt } from "./types";
-import { getGlyphWidth } from "./constants";
+import { cropSvgToAdvance } from "./constants";
 
 interface LivePreviewProps {
   previewText: string;
   setPreviewText: (val: string) => void;
   glyphMap: Record<string, GlyphArt>;
 }
+
+// Height of the glyph container in px (used as the cap-height reference)
+const GLYPH_H = 58;
 
 export default function LivePreview({ previewText, setPreviewText, glyphMap }: LivePreviewProps) {
   return (
@@ -22,22 +25,36 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
         {[...previewText].map((letter, index) => {
           const art = glyphMap[letter];
           if (letter === " ") return <span key={`${letter}-${index}`} className="live-space" />;
-          return art?.svg ? (
+
+          if (!art?.svg) {
+            return (
+              <span className="live-fallback" key={`${letter}-${index}`}>
+                {letter}
+              </span>
+            );
+          }
+
+          // Crop the SVG viewBox to just the active pixel region + 1px sidebearing
+          const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 1.0);
+          const containerW = widthRatio * GLYPH_H;
+
+          return (
             <span
               className="live-glyph"
               key={`${letter}-${index}`}
               style={{
-                width: `${(getGlyphWidth(art.svg) / 100) * 58}px`,
-                marginRight: art.kerning,
-                transform: `translate(${art.x ?? 0}%, ${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg) scale(${(art.scale ?? 100) / 100})`,
-                transformOrigin: "center",
+                display: "inline-block",
+                width: `${containerW + (art.kerning ?? 0)}px`,
+                height: `${GLYPH_H}px`,
+                flexShrink: 0,
+                // Only apply y-offset and rotation — x is now handled by advance width
+                transform: art.y || art.rotation
+                  ? `translateY(${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg)`
+                  : undefined,
+                transformOrigin: "center bottom",
               }}
-              dangerouslySetInnerHTML={{ __html: art.svg }}
+              dangerouslySetInnerHTML={{ __html: croppedSvg }}
             />
-          ) : (
-            <span className="live-fallback" key={`${letter}-${index}`}>
-              {letter}
-            </span>
           );
         })}
       </div>

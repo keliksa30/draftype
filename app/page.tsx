@@ -39,7 +39,7 @@ import {
   pointsFromSvg,
   applyAutoKerning,
   applyAutoNeatMap,
-  getGlyphWidth,
+  getGlyphBounds,
   loadSvgToBrickGrid,
   readFileAsDataUrl,
   getCalligraphyPath,
@@ -2167,10 +2167,15 @@ export default function Home() {
       new opentype.Glyph({ name: "space", unicode: 32, advanceWidth: 360 }),
       ...glyphs.map((glyph) => {
         const art = glyphMap[glyph] ?? emptyGlyph();
+        const bounds = getGlyphBounds(art.svg);
+        const unitsPerGrid = 1000 / (bounds.gridWidth || 16);
+        const advanceWidth = bounds.isEmpty
+          ? 650
+          : Math.round((bounds.maxX - bounds.minX + 2) * unitsPerGrid) + (art.kerning ?? 0) * 4;
         return new opentype.Glyph({
           name: `glyph-${glyph.charCodeAt(0)}`,
           unicode: glyph.charCodeAt(0),
-          advanceWidth: Math.round((getGlyphWidth(art.svg, 65) / 100) * 1000) + art.kerning * 4,
+          advanceWidth,
           path: art.svg ? makeExportPath(opentype, art, glyph) : undefined,
         });
       }),

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { GlyphArt } from "./types";
-import { getGlyphWidth } from "./constants";
+import { cropSvgToAdvance } from "./constants";
 
 interface SpecimenPlaygroundProps {
   glyphMap: Record<string, GlyphArt>;
@@ -46,19 +46,24 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
           const totalKern = individualKern + pairKern + letterSpacing;
 
           if (art?.svg) {
+            // Crop SVG to pixel bounding box for correct proportional advance width
+            const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 1.0);
+            const glyphW = widthRatio * fontSize;
+            const kern = (pairKern + letterSpacing) * (fontSize / 36);
             return (
               <span
                 key={`letter-${letterIdx}`}
                 style={{
                   display: "inline-block",
-                  width: `${(getGlyphWidth(art.svg) / 100) * fontSize}px`,
+                  width: `${glyphW + kern}px`,
                   height: `${fontSize}px`,
-                  marginRight: `${totalKern * (fontSize / 36)}px`, // scale spacing with font size
-                  transform: `translate(${art.x ?? 0}%, ${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg) scale(${(art.scale ?? 100) / 100})`,
-                  transformOrigin: "center",
+                  transform: art.y || art.rotation
+                    ? `translateY(${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg)`
+                    : undefined,
+                  transformOrigin: "center bottom",
                 }}
                 className="specimen-glyph"
-                dangerouslySetInnerHTML={{ __html: art.svg }}
+                dangerouslySetInnerHTML={{ __html: croppedSvg }}
               />
             );
           } else {
