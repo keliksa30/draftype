@@ -89,23 +89,21 @@ export default function GlyphStrip({
         </button>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: "10px" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "18px" }}>
         <button
-          className="custom-glyph-trigger-btn"
+          className="action-button yellow"
           style={{
+            width: "auto",
+            minHeight: "40px",
+            padding: "8px 20px",
             fontSize: "0.78rem",
             fontWeight: "900",
-            color: "var(--red)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            textTransform: "uppercase",
             letterSpacing: "0.06em",
-            textDecoration: "underline",
+            textTransform: "uppercase",
           }}
           onClick={onAddCustomGlyphClick}
         >
-          {t("custom_glyph_trigger")}
+          ➕ {t("custom_glyph_trigger")}
         </button>
       </div>
     </>
