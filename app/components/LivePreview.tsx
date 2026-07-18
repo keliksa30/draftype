@@ -1,5 +1,5 @@
 import { GlyphArt } from "./types";
-import { cropSvgToAdvance } from "./constants";
+import { cropSvgToAdvance, getGlyphBounds } from "./constants";
 import { useI18n } from "../utils/i18n";
 
 interface LivePreviewProps {
@@ -37,8 +37,10 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
             );
           }
 
-          // Crop the SVG viewBox to just the active pixel region + 1px sidebearing
-          const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 1.0);
+          const bounds = getGlyphBounds(art.svg);
+          const kerningScale = GLYPH_H / (bounds.gridHeight || 16);
+          const kerningPx = (art.kerning ?? 0) * kerningScale;
+          const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 0.06);
           const containerW = widthRatio * GLYPH_H;
 
           return (
@@ -47,10 +49,9 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
               key={`${letter}-${index}`}
               style={{
                 display: "inline-block",
-                width: `${containerW + (art.kerning ?? 0)}px`,
+                width: `${Math.max(8, containerW + kerningPx)}px`,
                 height: `${GLYPH_H}px`,
                 flexShrink: 0,
-                // Only apply y-offset and rotation — x is now handled by advance width
                 transform: art.y || art.rotation
                   ? `translateY(${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg)`
                   : undefined,

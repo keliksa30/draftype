@@ -2423,26 +2423,21 @@ function MainApp() {
         // So the natural left edge of pixels = 150 + minX * glyphScale
         // glyphScale = (art.scale/100) * (700 / max(viewWidth,viewHeight))
         const glyphScaleFactor = (art.scale / 100) * (700 / Math.max(bounds.gridWidth, bounds.gridHeight, 1));
-        // Natural left position of first pixel in OTF units
+        const desiredLSB = 70; // 70 units out of 1000 EM (7% of EM) for balanced spacing
         const naturalLeft = 150 + bounds.minX * glyphScaleFactor;
-        // Desired left side bearing = 1 grid pixel in OTF units
-        const desiredLSB = 1 * glyphScaleFactor;
-        // xShift moves the path so first pixel starts at desiredLSB from origin
         const xShiftProportional = desiredLSB - naturalLeft;
 
         let advanceWidth: number;
         let artWithShift: GlyphArt & { _xShift?: number };
 
         if (exportSpacingMode === "monospace") {
-          // Fixed advance: full grid width in OTF units (classic pixel/monospace look)
           advanceWidth = Math.round(unitsPerGrid * bounds.gridWidth);
           artWithShift = { ...art, _xShift: 0 };
         } else {
-          // Proportional: advance = LSB + content + RSB (1 grid pixel each side)
           const contentWidthOTF = (bounds.maxX - bounds.minX) * glyphScaleFactor;
           advanceWidth = bounds.isEmpty
             ? 650
-            : Math.round(desiredLSB + contentWidthOTF + desiredLSB) + (art.kerning ?? 0) * 4;
+            : Math.round(desiredLSB + contentWidthOTF + desiredLSB) + (art.kerning ?? 0) * 8;
           artWithShift = { ...art, _xShift: xShiftProportional };
         }
 

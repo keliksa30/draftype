@@ -329,7 +329,7 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
   let minX = Infinity;
   let maxX = -Infinity;
 
-  // Regex-based extraction — works for both SSR and client
+  // 1. Process rect-based glyphs (for pixel bricks)
   for (const m of svgString.matchAll(/<rect[^>]*?>/g)) {
     const rectStr = m[0];
     const xm = rectStr.match(/\bx=["'](-?[\d.]+)["']/);
@@ -342,29 +342,112 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
     }
   }
 
-  // Handle path-based glyphs (e.g. autotrace results)
-  for (const m of svgString.matchAll(/\b[MLHVCSQTAml]\s*(-?[\d.]+)/g)) {
-    const val = parseFloat(m[1]);
-    if (!isNaN(val) && val >= 0 && val <= gridWidth * 2) {
-      minX = Math.min(minX, val);
-      maxX = Math.max(maxX, val);
+  // 2. Process path-based glyphs (for freehand/handwriting curves)
+  const pathPattern = /<path[^>]*d=["']([^"']+)["'][^>]*>/gi;
+  for (const match of svgString.matchAll(pathPattern)) {
+    const d = match[1];
+    const regex = /([MmLlHhVvQqCcZz])\s*([0-9eE\s,.-]*)/g;
+    let cmdMatch;
+    let currX = 0;
+    let currY = 0;
+    
+    while ((cmdMatch = regex.exec(d)) !== null) {
+      const cmd = cmdMatch[1];
+      const argsStr = cmdMatch[2] || "";
+      const argMatches = argsStr.match(/-?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g);
+      const args = argMatches ? argMatches.map(Number) : [];
+      
+      const cmdUpper = cmd.toUpperCase();
+      
+      if (cmdUpper === 'M' || cmdUpper === 'L') {
+        const isRelative = cmd === 'm' || cmd === 'l';
+        for (let i = 0; i < args.length; i += 2) {
+          if (i + 1 >= args.length) break;
+          let x = args[i];
+          let y = args[i+1];
+          if (isRelative) {
+            x += currX;
+            y += currY;
+          }
+          currX = x;
+          currY = y;
+          minX = Math.min(minX, currX);
+          maxX = Math.max(maxX, currX);
+        }
+      } else if (cmdUpper === 'H') {
+        const isRelative = cmd === 'h';
+        for (let i = 0; i < args.length; i++) {
+          let x = args[i];
+          if (isRelative) x += currX;
+          currX = x;
+          minX = Math.min(minX, currX);
+          maxX = Math.max(maxX, currX);
+        }
+      } else if (cmdUpper === 'V') {
+        const isRelative = cmd === 'v';
+        for (let i = 0; i < args.length; i++) {
+          let y = args[i];
+          if (isRelative) y += currY;
+          currY = y;
+          minX = Math.min(minX, currX);
+          maxX = Math.max(maxX, currX);
+        }
+      } else if (cmdUpper === 'Q') {
+        const isRelative = cmd === 'q';
+        for (let i = 0; i < args.length; i += 4) {
+          if (i + 3 >= args.length) break;
+          let cx = args[i];
+          let cy = args[i+1];
+          let x = args[i+2];
+          let y = args[i+3];
+          if (isRelative) {
+            cx += currX;
+            cy += currY;
+            x += currX;
+            y += currY;
+          }
+          minX = Math.min(minX, cx, x);
+          maxX = Math.max(maxX, cx, x);
+          currX = x;
+          currY = y;
+        }
+      } else if (cmdUpper === 'C') {
+        const isRelative = cmd === 'c';
+        for (let i = 0; i < args.length; i += 6) {
+          if (i + 5 >= args.length) break;
+          let cx1 = args[i];
+          let cy1 = args[i+1];
+          let cx2 = args[i+2];
+          let cy2 = args[i+3];
+          let x = args[i+4];
+          let y = args[i+5];
+          if (isRelative) {
+            cx1 += currX;
+            cy1 += currY;
+            cx2 += currX;
+            cy2 += currY;
+            x += currX;
+            y += currY;
+          }
+          minX = Math.min(minX, cx1, cx2, x);
+          maxX = Math.max(maxX, cx1, cx2, x);
+          currX = x;
+          currY = y;
+        }
+      }
     }
   }
 
-  if (minX === Infinity || maxX === -Infinity || maxX <= minX) {
+  if (minX === Infinity || maxX === -Infinity) {
     return fallback;
   }
 
   return { minX, maxX, gridWidth, gridHeight, isEmpty: false };
 };
 
-// ─── Crop SVG viewBox to just the active pixel region + sidebearing ───────────
-// This is the KEY function for proper advance-width rendering.
-// Returns a modified SVG string with a narrower viewBox and the width ratio.
-
 export const cropSvgToAdvance = (
   svgString: string | undefined,
-  sidebearing = 1.0,  // in grid units (e.g. 1 = 1px on 16px grid)
+  sidebearingPercent = 0.06,
 ): { svg: string; widthRatio: number } => {
   const fallback = { svg: svgString ?? "", widthRatio: 0.65 };
   if (!svgString) return fallback;
@@ -372,16 +455,16 @@ export const cropSvgToAdvance = (
   const bounds = getGlyphBounds(svgString);
   if (bounds.isEmpty) return fallback;
 
+  const sidebearing = sidebearingPercent * bounds.gridWidth;
   const viewMinX = bounds.minX - sidebearing;
   const viewWidth = (bounds.maxX - bounds.minX) + sidebearing * 2;
 
-  // Replace existing viewBox with the cropped one
   const croppedSvg = svgString.replace(
     /viewBox=["'][^"']*["']/,
     `viewBox="${viewMinX.toFixed(2)} 0 ${viewWidth.toFixed(2)} ${bounds.gridHeight}"`,
   );
 
-  const widthRatio = viewWidth / bounds.gridHeight; // aspect ratio of cropped region
+  const widthRatio = viewWidth / bounds.gridHeight;
 
   return { svg: croppedSvg, widthRatio };
 };
