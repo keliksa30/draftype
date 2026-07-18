@@ -608,6 +608,123 @@ function MainApp() {
 
   // ─── File Upload Handlers ────────────────────────────────────────────────────
 
+  const runAutotraceForImage = async (imgUrl: string) => {
+    const size = 96;
+    const result = await drawImageToCanvas(imgUrl, size);
+    if (!result) return;
+    const data = result.ctx.getImageData(0, 0, size, size).data;
+
+    const isDark = (x: number, y: number) => {
+      if (x < 0 || x >= size || y < 0 || y >= size) return false;
+      const idx = (y * size + x) * 4;
+      const alpha = data[idx + 3];
+      const darkness = 255 - (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+      return alpha > traceAlpha && darkness > traceThreshold;
+    };
+
+    const segments: [number, number, number, number][] = [];
+
+    for (let y = 0; y < size - 1; y += 1) {
+      for (let x = 0; x < size - 1; x += 1) {
+        const p0 = isDark(x, y) ? 1 : 0;
+        const p1 = isDark(x + 1, y) ? 1 : 0;
+        const p2 = isDark(x + 1, y + 1) ? 1 : 0;
+        const p3 = isDark(x, y + 1) ? 1 : 0;
+
+        const caseIndex = p0 * 8 + p1 * 4 + p2 * 2 + p3 * 1;
+        if (caseIndex === 0 || caseIndex === 15) continue;
+
+        const t: [number, number] = [x + 0.5, y];
+        const r: [number, number] = [x + 1, y + 0.5];
+        const b: [number, number] = [x + 0.5, y + 1];
+        const l: [number, number] = [x, y + 0.5];
+
+        if (caseIndex === 1) segments.push([l[0], l[1], b[0], b[1]]);
+        else if (caseIndex === 2) segments.push([b[0], b[1], r[0], r[1]]);
+        else if (caseIndex === 3) segments.push([l[0], l[1], r[0], r[1]]);
+        else if (caseIndex === 4) segments.push([t[0], t[1], r[0], r[1]]);
+        else if (caseIndex === 5) {
+          segments.push([l[0], l[1], t[0], t[1]]);
+          segments.push([b[0], b[1], r[0], r[1]]);
+        } else if (caseIndex === 6) segments.push([t[0], t[1], b[0], b[1]]);
+        else if (caseIndex === 7) segments.push([l[0], l[1], t[0], t[1]]);
+        else if (caseIndex === 8) segments.push([l[0], l[1], t[0], t[1]]);
+        else if (caseIndex === 9) segments.push([t[0], t[1], b[0], b[1]]);
+        else if (caseIndex === 10) {
+          segments.push([l[0], l[1], b[0], b[1]]);
+          segments.push([t[0], t[1], r[0], r[1]]);
+        } else if (caseIndex === 11) segments.push([t[0], t[1], r[0], r[1]]);
+        else if (caseIndex === 12) segments.push([l[0], l[1], r[0], r[1]]);
+        else if (caseIndex === 13) segments.push([b[0], b[1], r[0], r[1]]);
+        else if (caseIndex === 14) segments.push([l[0], l[1], b[0], b[1]]);
+      }
+    }
+
+    const paths: string[] = [];
+    const visited = new Set<number>();
+    const scaleCoord = 100;
+    const hashPoint = (px: number, py: number) =>
+      `${Math.round(px * scaleCoord)},${Math.round(py * scaleCoord)}`;
+    const pointToSegments = new Map<string, number[]>();
+
+    segments.forEach((seg, idx) => {
+      const p1 = hashPoint(seg[0], seg[1]);
+      const p2 = hashPoint(seg[2], seg[3]);
+      if (!pointToSegments.has(p1)) pointToSegments.set(p1, []);
+      if (!pointToSegments.has(p2)) pointToSegments.set(p2, []);
+      pointToSegments.get(p1)!.push(idx);
+      pointToSegments.get(p2)!.push(idx);
+    });
+
+    for (let i = 0; i < segments.length; i += 1) {
+      if (visited.has(i)) continue;
+      const [sx, sy, ex, ey] = segments[i];
+      visited.add(i);
+      let loop = `M${sx.toFixed(1)} ${sy.toFixed(1)}`;
+      let currentHash = hashPoint(ex, ey);
+      loop += ` L${ex.toFixed(1)} ${ey.toFixed(1)}`;
+      let found = true;
+      while (found) {
+        found = false;
+        const candidates = pointToSegments.get(currentHash) || [];
+        for (const nextIdx of candidates) {
+          if (!visited.has(nextIdx)) {
+            visited.add(nextIdx);
+            const nextSeg = segments[nextIdx];
+            const h1 = hashPoint(nextSeg[0], nextSeg[1]);
+            const h2 = hashPoint(nextSeg[2], nextSeg[3]);
+            if (h1 === currentHash) {
+              currentHash = h2;
+              loop += ` L${nextSeg[2].toFixed(1)} ${nextSeg[3].toFixed(1)}`;
+            } else {
+              currentHash = h1;
+              loop += ` L${nextSeg[0].toFixed(1)} ${nextSeg[1].toFixed(1)}`;
+            }
+            found = true;
+            break;
+          }
+        }
+      }
+      loop += " Z";
+      paths.push(loop);
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" fill="none"><path d="${paths.join(
+      " "
+    )}" fill="currentColor" fill-rule="evenodd"/></svg>`;
+    
+    setWorkingSvg(svg);
+    setGlyphMap((current) =>
+      applyAutoKerning({
+        ...current,
+        [activeGlyph]: {
+          ...(current[activeGlyph] ?? emptyGlyph()),
+          svg,
+        },
+      }),
+    );
+  };
+
   const processUploadedFile = async (file: File) => {
     setFileName(file.name);
 
@@ -623,18 +740,9 @@ function MainApp() {
 
     const dataUrl = await readFileAsDataUrl(file);
     setUploadedImage(dataUrl);
-    const imgSvg = makeImageSvg(dataUrl);
-    setWorkingSvg(imgSvg);
-    setGlyphMap((current) =>
-      applyAutoKerning({
-        ...current,
-        [activeGlyph]: {
-          ...(current[activeGlyph] ?? emptyGlyph()),
-          svg: imgSvg,
-        },
-      }),
-    );
-    setTraceStatus("Gambar siap dimasukkan atau ditrace");
+    setTraceStatus("Mengimpor dan mendeteksi gambar...");
+    await runAutotraceForImage(dataUrl);
+    setTraceStatus("Gambar berhasil di-import dan otomatis di-vectorize!");
   };
 
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -2453,26 +2561,156 @@ function MainApp() {
     return path;
   };
 
+  const autoVectorizeImageUrl = async (imgUrl: string): Promise<string | null> => {
+    try {
+      const size = 96;
+      const result = await drawImageToCanvas(imgUrl, size);
+      if (!result) return null;
+      const data = result.ctx.getImageData(0, 0, size, size).data;
+
+      const isDark = (x: number, y: number) => {
+        if (x < 0 || x >= size || y < 0 || y >= size) return false;
+        const idx = (y * size + x) * 4;
+        const alpha = data[idx + 3];
+        const darkness = 255 - (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+        return alpha > traceAlpha && darkness > traceThreshold;
+      };
+
+      const segments: [number, number, number, number][] = [];
+
+      for (let y = 0; y < size - 1; y += 1) {
+        for (let x = 0; x < size - 1; x += 1) {
+          const p0 = isDark(x, y) ? 1 : 0;
+          const p1 = isDark(x + 1, y) ? 1 : 0;
+          const p2 = isDark(x + 1, y + 1) ? 1 : 0;
+          const p3 = isDark(x, y + 1) ? 1 : 0;
+
+          const caseIndex = p0 * 8 + p1 * 4 + p2 * 2 + p3 * 1;
+          if (caseIndex === 0 || caseIndex === 15) continue;
+
+          const t: [number, number] = [x + 0.5, y];
+          const r: [number, number] = [x + 1, y + 0.5];
+          const b: [number, number] = [x + 0.5, y + 1];
+          const l: [number, number] = [x, y + 0.5];
+
+          if (caseIndex === 1) segments.push([l[0], l[1], b[0], b[1]]);
+          else if (caseIndex === 2) segments.push([b[0], b[1], r[0], r[1]]);
+          else if (caseIndex === 3) segments.push([l[0], l[1], r[0], r[1]]);
+          else if (caseIndex === 4) segments.push([t[0], t[1], r[0], r[1]]);
+          else if (caseIndex === 5) {
+            segments.push([l[0], l[1], t[0], t[1]]);
+            segments.push([b[0], b[1], r[0], r[1]]);
+          } else if (caseIndex === 6) segments.push([t[0], t[1], b[0], b[1]]);
+          else if (caseIndex === 7) segments.push([l[0], l[1], t[0], t[1]]);
+          else if (caseIndex === 8) segments.push([l[0], l[1], t[0], t[1]]);
+          else if (caseIndex === 9) segments.push([t[0], t[1], b[0], b[1]]);
+          else if (caseIndex === 10) {
+            segments.push([l[0], l[1], b[0], b[1]]);
+            segments.push([t[0], t[1], r[0], r[1]]);
+          } else if (caseIndex === 11) segments.push([t[0], t[1], r[0], r[1]]);
+          else if (caseIndex === 12) segments.push([l[0], l[1], r[0], r[1]]);
+          else if (caseIndex === 13) segments.push([b[0], b[1], r[0], r[1]]);
+          else if (caseIndex === 14) segments.push([l[0], l[1], b[0], b[1]]);
+        }
+      }
+
+      const paths: string[] = [];
+      const visited = new Set<number>();
+      const scaleCoord = 100;
+      const hashPoint = (px: number, py: number) =>
+        `${Math.round(px * scaleCoord)},${Math.round(py * scaleCoord)}`;
+      const pointToSegments = new Map<string, number[]>();
+
+      segments.forEach((seg, idx) => {
+        const p1 = hashPoint(seg[0], seg[1]);
+        const p2 = hashPoint(seg[2], seg[3]);
+        if (!pointToSegments.has(p1)) pointToSegments.set(p1, []);
+        if (!pointToSegments.has(p2)) pointToSegments.set(p2, []);
+        pointToSegments.get(p1)!.push(idx);
+        pointToSegments.get(p2)!.push(idx);
+      });
+
+      for (let i = 0; i < segments.length; i += 1) {
+        if (visited.has(i)) continue;
+        const [sx, sy, ex, ey] = segments[i];
+        visited.add(i);
+        let loop = `M${sx.toFixed(1)} ${sy.toFixed(1)}`;
+        let currentHash = hashPoint(ex, ey);
+        loop += ` L${ex.toFixed(1)} ${ey.toFixed(1)}`;
+        let found = true;
+        while (found) {
+          found = false;
+          const candidates = pointToSegments.get(currentHash) || [];
+          for (const nextIdx of candidates) {
+            if (!visited.has(nextIdx)) {
+              visited.add(nextIdx);
+              const nextSeg = segments[nextIdx];
+              const h1 = hashPoint(nextSeg[0], nextSeg[1]);
+              const h2 = hashPoint(nextSeg[2], nextSeg[3]);
+              if (h1 === currentHash) {
+                currentHash = h2;
+                loop += ` L${nextSeg[2].toFixed(1)} ${nextSeg[3].toFixed(1)}`;
+              } else {
+                currentHash = h1;
+                loop += ` L${nextSeg[0].toFixed(1)} ${nextSeg[1].toFixed(1)}`;
+              }
+              found = true;
+              break;
+            }
+          }
+        }
+        loop += " Z";
+        paths.push(loop);
+      }
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" fill="none"><path d="${paths.join(
+        " "
+      )}" fill="currentColor" fill-rule="evenodd"/></svg>`;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
   const exportFont = async (format: "otf" | "ttf") => {
     setExportStatus(`Building ${format.toUpperCase()}...`);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const opentype = (await import("opentype.js")) as any;
+
+    const exportedGlyphPromises = dynamicGlyphs.map(async (glyph) => {
+      const art = glyphMap[glyph] ?? emptyGlyph();
+      let resolvedSvg = art.svg || "";
+
+      if (resolvedSvg.includes("<image ") || resolvedSvg.includes("<image\n")) {
+        const imageMatch = resolvedSvg.match(/<image[^>]*href=["']([^"']+)["']/i);
+        if (imageMatch) {
+          const imgUrl = imageMatch[1];
+          const tracedSvg = await autoVectorizeImageUrl(imgUrl);
+          if (tracedSvg) {
+            resolvedSvg = tracedSvg;
+          }
+        }
+      }
+
+      const artWithSvg = { ...art, svg: resolvedSvg };
+      const { advanceWidth, xShift } = computeGlyphAdvance(artWithSvg, exportSpacingMode);
+      const artWithShift = { ...artWithSvg, _xShift: xShift };
+
+      return new opentype.Glyph({
+        name: `glyph-${glyph.charCodeAt(0)}`,
+        unicode: glyph.charCodeAt(0),
+        advanceWidth: Math.max(100, advanceWidth),
+        path: resolvedSvg ? makeExportPath(opentype, artWithShift, glyph) : undefined,
+      });
+    });
+
+    const resolvedGlyphs = await Promise.all(exportedGlyphPromises);
     const exportedGlyphs = [
       new opentype.Glyph({ name: ".notdef", advanceWidth: 650 }),
       new opentype.Glyph({ name: "space", unicode: 32, advanceWidth: 360 }),
-      ...dynamicGlyphs.map((glyph) => {
-        const art = glyphMap[glyph] ?? emptyGlyph();
-        const { advanceWidth, xShift } = computeGlyphAdvance(art, exportSpacingMode);
-        const artWithShift = { ...art, _xShift: xShift };
-
-        return new opentype.Glyph({
-          name: `glyph-${glyph.charCodeAt(0)}`,
-          unicode: glyph.charCodeAt(0),
-          advanceWidth: Math.max(100, advanceWidth),
-          path: art.svg ? makeExportPath(opentype, artWithShift, glyph) : undefined,
-        });
-      }),
+      ...resolvedGlyphs,
     ];
+
     const font = new opentype.Font({
       familyName: fontName.trim() || "DrafType Pixel",
       styleName: fontStyle.trim() || "Regular",
