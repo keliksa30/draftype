@@ -471,7 +471,7 @@ h2 {
 
 .button-row {
   display: grid;
-  grid-template-columns: 1fr 0.55fr;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
