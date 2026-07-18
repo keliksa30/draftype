@@ -1927,24 +1927,34 @@ function MainApp() {
       const dy = p2.y - p1.y;
       if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) return;
       const len = Math.hypot(dx, dy);
-      const nx = (dy / len) * (thickness / 2);
-      const ny = (-dx / len) * (thickness / 2);
+      
+      const r = thickness / 2;
+      const k = r * 0.5522848;
+      
+      const tx = dx / len;
+      const ty = dy / len;
+      const nx = -ty;
+      const ny = tx;
+
       if (isWhite) {
-        path.moveTo(p1.x + nx, p1.y + ny);
-        path.lineTo(p1.x - nx, p1.y - ny);
-        path.lineTo(p2.x - nx, p2.y - ny);
-        path.lineTo(p2.x + nx, p2.y + ny);
+        path.moveTo(p1.x - nx * r, p1.y - ny * r);
+        path.bezierCurveTo(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
+        path.bezierCurveTo(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
+        path.lineTo(p2.x + nx * r, p2.y + ny * r);
+        path.bezierCurveTo(p2.x + nx * r + tx * k, p2.y + ny * r + ty * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
+        path.bezierCurveTo(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r - ty * k, p2.x - nx * r, p2.y - ny * r);
+        path.lineTo(p1.x - nx * r, p1.y - ny * r);
       } else {
-        path.moveTo(p1.x + nx, p1.y + ny);
-        path.lineTo(p2.x + nx, p2.y + ny);
-        path.lineTo(p2.x - nx, p2.y - ny);
-        path.lineTo(p1.x - nx, p1.y - ny);
+        path.moveTo(p1.x + nx * r, p1.y + ny * r);
+        path.lineTo(p2.x + nx * r, p2.y + ny * r);
+        path.bezierCurveTo(p2.x + nx * r + tx * k, p2.y + ny * r + ty * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
+        path.bezierCurveTo(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r - ty * k, p2.x - nx * r, p2.y - ny * r);
+        path.lineTo(p1.x - nx * r, p1.y - ny * r);
+        path.bezierCurveTo(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
+        path.bezierCurveTo(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
+        path.lineTo(p1.x + nx * r, p1.y + ny * r);
       }
       path.close();
-      
-      // Perfectly round joints to smooth out strokes
-      drawCircle(p1.x, p1.y, thickness / 2, isWhite);
-      drawCircle(p2.x, p2.y, thickness / 2, isWhite);
     };
 
     let drew = false;
