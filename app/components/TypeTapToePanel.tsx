@@ -153,6 +153,7 @@ export default function TypeTapToePanel({
           className="action-button"
           onClick={clearTypeUpload}
           title={t("clear_img")}
+          style={{ gridColumn: "span 2" }}
         >
           {t("clear_img")}
         </button>
