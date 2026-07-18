@@ -2177,31 +2177,167 @@ function MainApp() {
 
       if (thickness > 0) {
         contours.forEach((contour) => {
+          // 1. Sample all segments of this contour into a single flat array of points
+          const pts: { x: number; y: number }[] = [];
+          
+          // Push start point
+          pts.push({ x: contour.startPt.x, y: contour.startPt.y });
+          
           contour.segments.forEach((seg) => {
             if (seg.type === 'L') {
-              drawThickSegment(seg.start, seg.end, thickness, isWhite);
+              pts.push({ x: seg.end.x, y: seg.end.y });
             } else if (seg.type === 'Q' && seg.c1) {
-              let prev = seg.start;
-              for (let t = 0.1; t <= 1; t += 0.1) {
+              // Sample quadratic Bezier curve at 8 steps
+              for (let step = 1; step <= 8; step++) {
+                const t = step / 8;
                 const u = 1 - t;
                 const nx = u * u * seg.start.x + 2 * u * t * seg.c1.x + t * t * seg.end.x;
                 const ny = u * u * seg.start.y + 2 * u * t * seg.c1.y + t * t * seg.end.y;
-                const nextP = { x: nx, y: ny };
-                drawThickSegment(prev, nextP, thickness, isWhite);
-                prev = nextP;
+                pts.push({ x: nx, y: ny });
               }
             } else if (seg.type === 'C' && seg.c1 && seg.c2) {
-              let prev = seg.start;
-              for (let t = 0.1; t <= 1; t += 0.1) {
+              // Sample cubic Bezier curve at 8 steps
+              for (let step = 1; step <= 8; step++) {
+                const t = step / 8;
                 const u = 1 - t;
                 const nx = u * u * u * seg.start.x + 3 * u * u * t * seg.c1.x + 3 * u * t * t * seg.c2.x + t * t * t * seg.end.x;
                 const ny = u * u * u * seg.start.y + 3 * u * u * t * seg.c1.y + 3 * u * t * t * seg.c2.y + t * t * t * seg.end.y;
-                const nextP = { x: nx, y: ny };
-                drawThickSegment(prev, nextP, thickness, isWhite);
-                prev = nextP;
+                pts.push({ x: nx, y: ny });
               }
             }
           });
+          
+          // Filter out consecutive duplicate points to avoid division by zero in normal calculation
+          const filteredPts: { x: number; y: number }[] = [];
+          pts.forEach((pt) => {
+            if (filteredPts.length === 0) {
+              filteredPts.push(pt);
+            } else {
+              const last = filteredPts[filteredPts.length - 1];
+              if (Math.hypot(pt.x - last.x, pt.y - last.y) > 0.05) {
+                filteredPts.push(pt);
+              }
+            }
+          });
+          
+          if (filteredPts.length === 0) return;
+          
+          const nPts = filteredPts.length;
+          const r = thickness / 2;
+          
+          // If only 1 point, draw a simple circle outline
+          if (nPts === 1) {
+            const p = filteredPts[0];
+            drawCircle(p.x, p.y, r, isWhite);
+            return;
+          }
+          
+          // Calculate unit normals at each point
+          const normals: { x: number; y: number }[] = [];
+          for (let i = 0; i < nPts; i++) {
+            let vx = 0;
+            let vy = 0;
+            if (i === 0) {
+              vx = filteredPts[1].x - filteredPts[0].x;
+              vy = filteredPts[1].y - filteredPts[0].y;
+            } else if (i === nPts - 1) {
+              vx = filteredPts[nPts - 1].x - filteredPts[nPts - 2].x;
+              vy = filteredPts[nPts - 1].y - filteredPts[nPts - 2].y;
+            } else {
+              const dx1 = filteredPts[i].x - filteredPts[i - 1].x;
+              const dy1 = filteredPts[i].y - filteredPts[i - 1].y;
+              const len1 = Math.hypot(dx1, dy1) || 1;
+              const dx2 = filteredPts[i + 1].x - filteredPts[i].x;
+              const dy2 = filteredPts[i + 1].y - filteredPts[i].y;
+              const len2 = Math.hypot(dx2, dy2) || 1;
+              vx = dx1 / len1 + dx2 / len2;
+              vy = dy1 / len1 + dy2 / len2;
+            }
+            
+            const len = Math.hypot(vx, vy);
+            if (len < 0.001) {
+              normals.push({ x: 0, y: 1 });
+            } else {
+              const tx = vx / len;
+              const ty = vy / len;
+              normals.push({ x: -ty, y: tx });
+            }
+          }
+          
+          // Left side outline points (L = pt + normal * r)
+          const leftSide: { x: number; y: number }[] = [];
+          // Right side outline points (R = pt - normal * r)
+          const rightSide: { x: number; y: number }[] = [];
+          
+          for (let i = 0; i < nPts; i++) {
+            const pt = filteredPts[i];
+            const normal = normals[i];
+            
+            leftSide.push({
+              x: pt.x + normal.x * r,
+              y: pt.y + normal.y * r,
+            });
+            
+            rightSide.push({
+              x: pt.x - normal.x * r,
+              y: pt.y - normal.y * r,
+            });
+          }
+          
+          // Start tracing the unified path
+          if (isWhite) {
+            path.moveTo(rightSide[0].x, rightSide[0].y);
+            for (let i = 1; i < nPts; i++) {
+              path.lineTo(rightSide[i].x, rightSide[i].y);
+            }
+            
+            const endPt = filteredPts[nPts - 1];
+            const endNormal = normals[nPts - 1];
+            const endAngle = Math.atan2(-endNormal.y, -endNormal.x);
+            for (let step = 1; step <= 4; step++) {
+              const a = endAngle + step * (Math.PI / 4);
+              path.lineTo(endPt.x + r * Math.cos(a), endPt.y + r * Math.sin(a));
+            }
+            
+            for (let i = nPts - 1; i >= 0; i--) {
+              path.lineTo(leftSide[i].x, leftSide[i].y);
+            }
+            
+            const startPt = filteredPts[0];
+            const startNormal = normals[0];
+            const startAngle = Math.atan2(startNormal.y, startNormal.x);
+            for (let step = 1; step <= 4; step++) {
+              const a = startAngle + step * (Math.PI / 4);
+              path.lineTo(startPt.x + r * Math.cos(a), startPt.y + r * Math.sin(a));
+            }
+          } else {
+            path.moveTo(leftSide[0].x, leftSide[0].y);
+            for (let i = 1; i < nPts; i++) {
+              path.lineTo(leftSide[i].x, leftSide[i].y);
+            }
+            
+            const endPt = filteredPts[nPts - 1];
+            const endNormal = normals[nPts - 1];
+            const endAngle = Math.atan2(endNormal.y, endNormal.x);
+            for (let step = 1; step <= 4; step++) {
+              const a = endAngle + step * (Math.PI / 4);
+              path.lineTo(endPt.x + r * Math.cos(a), endPt.y + r * Math.sin(a));
+            }
+            
+            for (let i = nPts - 1; i >= 0; i--) {
+              path.lineTo(rightSide[i].x, rightSide[i].y);
+            }
+            
+            const startPt = filteredPts[0];
+            const startNormal = normals[0];
+            const startAngle = Math.atan2(-startNormal.y, -startNormal.x);
+            for (let step = 1; step <= 4; step++) {
+              const a = startAngle + step * (Math.PI / 4);
+              path.lineTo(startPt.x + r * Math.cos(a), startPt.y + r * Math.sin(a));
+            }
+          }
+          
+          path.close();
         });
       } else {
         contours.forEach((contour) => {

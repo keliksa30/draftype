@@ -412,14 +412,11 @@ const kerningForGlyph = (glyph: string): number => {
 };
 
 export const applyAutoKerning = (map: Record<string, GlyphArt>): Record<string, GlyphArt> => {
-  // With cropSvgToAdvance, advance width is computed from bounding box,
-  // so kerning should be 0 for all glyphs by default.
-  // Manual kerning via the slider is still respected.
   const next = { ...map };
-  glyphs.forEach((glyph) => {
+  Object.keys(next).forEach((glyph) => {
     const item = next[glyph];
     if (!item?.svg) return;
-    next[glyph] = { ...item, kerning: 0 };
+    next[glyph] = { ...item, kerning: kerningForGlyph(glyph) };
   });
   return next;
 };
