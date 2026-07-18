@@ -1969,19 +1969,25 @@ function MainApp() {
              tagStr.includes('fill="#fff"');
     };
 
-    // 1. Rectangles
-    const rectPattern = /<rect[^>]*x=["']?(-?\d*\.?\d+)["']?[^>]*y=["']?(-?\d*\.?\d+)["']?[^>]*width=["']?(\d*\.?\d+)["']?[^>]*height=["']?(\d*\.?\d+)["']?[^>]*>/gi;
-    for (const match of art.svg.matchAll(rectPattern)) {
-      const x = Number(match[1]);
-      const y = Number(match[2]);
-      const width = Number(match[3]);
-      const height = Number(match[4]);
+    // 1. Rectangles (order-independent attribute parsing)
+    const rectTags = art.svg.match(/<rect[^>]*>/gi) || [];
+    for (const tag of rectTags) {
+      const xMatch = tag.match(/x=["']?(-?\d*\.?\d+)["']?/i);
+      const yMatch = tag.match(/y=["']?(-?\d*\.?\d+)["']?/i);
+      const wMatch = tag.match(/width=["']?(\d*\.?\d+)["']?/i);
+      const hMatch = tag.match(/height=["']?(\d*\.?\d+)["']?/i);
+      
+      const x = xMatch ? Number(xMatch[1]) : 0;
+      const y = yMatch ? Number(yMatch[1]) : 0;
+      const width = wMatch ? Number(wMatch[1]) : 0;
+      const height = hMatch ? Number(hMatch[1]) : 0;
+      
       const p1 = transform(x, y);
       const p2 = transform(x + width, y);
       const p3 = transform(x + width, y + height);
       const p4 = transform(x, y + height);
       
-      const isWhite = checkIsWhite(match[0]);
+      const isWhite = checkIsWhite(tag);
       if (isWhite) {
         path.moveTo(p1.x, p1.y); path.lineTo(p4.x, p4.y); path.lineTo(p3.x, p3.y); path.lineTo(p2.x, p2.y); path.close();
       } else {
@@ -1990,25 +1996,42 @@ function MainApp() {
       drew = true;
     }
 
-    // 2. Lines
-    const linePattern = /<line[^>]*x1=["']?(-?\d*\.?\d+)["']?[^>]*y1=["']?(-?\d*\.?\d+)["']?[^>]*x2=["']?(-?\d*\.?\d+)["']?[^>]*y2=["']?(-?\d*\.?\d+)["']?[^>]*>/gi;
-    for (const match of art.svg.matchAll(linePattern)) {
-      const p1 = transform(Number(match[1]), Number(match[2]));
-      const p2 = transform(Number(match[3]), Number(match[4]));
-      const swMatch = match[0].match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
+    // 2. Lines (order-independent attribute parsing)
+    const lineTags = art.svg.match(/<line[^>]*>/gi) || [];
+    for (const tag of lineTags) {
+      const x1Match = tag.match(/x1=["']?(-?\d*\.?\d+)["']?/i);
+      const y1Match = tag.match(/y1=["']?(-?\d*\.?\d+)["']?/i);
+      const x2Match = tag.match(/x2=["']?(-?\d*\.?\d+)["']?/i);
+      const y2Match = tag.match(/y2=["']?(-?\d*\.?\d+)["']?/i);
+      
+      const x1 = x1Match ? Number(x1Match[1]) : 0;
+      const y1 = y1Match ? Number(y1Match[1]) : 0;
+      const x2 = x2Match ? Number(x2Match[1]) : 0;
+      const y2 = y2Match ? Number(y2Match[1]) : 0;
+      
+      const p1 = transform(x1, y1);
+      const p2 = transform(x2, y2);
+      const swMatch = tag.match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
       const sw = swMatch ? Number(swMatch[1]) * scale : 10 * scale;
-      const isWhite = checkIsWhite(match[0]);
+      const isWhite = checkIsWhite(tag);
       drawThickSegment(p1, p2, sw, isWhite);
       drew = true;
     }
 
-    // 3. Ellipses & Circles
-    const ellipsePattern = /<(?:ellipse|circle)[^>]*cx=["']?(-?\d*\.?\d+)["']?[^>]*cy=["']?(-?\d*\.?\d+)["']?[^>]*(?:rx=["']?(\d*\.?\d+)["']?[^>]*ry=["']?(\d*\.?\d+)["']?|r=["']?(\d*\.?\d+)["'])[^>]*>/gi;
-    for (const match of art.svg.matchAll(ellipsePattern)) {
-      const cx = Number(match[1]);
-      const cy = Number(match[2]);
-      const rx = Number(match[3] ?? match[5]);
-      const ry = Number(match[4] ?? match[5]);
+    // 3. Ellipses & Circles (order-independent attribute parsing)
+    const ellipseTags = art.svg.match(/<(?:ellipse|circle)[^>]*>/gi) || [];
+    for (const tag of ellipseTags) {
+      const cxMatch = tag.match(/cx=["']?(-?\d*\.?\d+)["']?/i);
+      const cyMatch = tag.match(/cy=["']?(-?\d*\.?\d+)["']?/i);
+      const rxMatch = tag.match(/rx=["']?(\d*\.?\d+)["']?/i);
+      const ryMatch = tag.match(/ry=["']?(\d*\.?\d+)["']?/i);
+      const rMatch = tag.match(/r=["']?(\d*\.?\d+)["']?/i);
+      
+      const cx = cxMatch ? Number(cxMatch[1]) : 0;
+      const cy = cyMatch ? Number(cyMatch[1]) : 0;
+      const rx = rxMatch ? Number(rxMatch[1]) : (rMatch ? Number(rMatch[1]) : 0);
+      const ry = ryMatch ? Number(ryMatch[1]) : (rMatch ? Number(rMatch[1]) : 0);
+      
       const K = 0.5522848;
       const dx = rx * K;
       const dy = ry * K;
@@ -2025,7 +2048,7 @@ function MainApp() {
       const c7 = transform(cx - rx, cy - dy);
       const c8 = transform(cx - dx, cy - ry);
       
-      const isWhite = checkIsWhite(match[0]);
+      const isWhite = checkIsWhite(tag);
       path.moveTo(p1.x, p1.y);
       if (path.bezierCurveTo) {
         if (isWhite) {
@@ -2046,15 +2069,8 @@ function MainApp() {
       drew = true;
     }
 
-    // 4. Paths
-    const pathPattern = /<path[^>]*d=["']([^"']+)["'][^>]*>/gi;
-    for (const match of art.svg.matchAll(pathPattern)) {
-      const d = match[1];
-      const isStrokeOnly = (match[0].includes('fill="none"') || match[0].includes("fill='none'")) && !match[0].includes('fill-rule="evenodd"');
-      const swMatch = match[0].match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
-      const thickness = (isStrokeOnly && swMatch) ? Number(swMatch[1]) * scale : 0;
-      const isWhite = checkIsWhite(match[0]);
-
+    // Helper for parsing SVG path d strings
+    const parsePathD = (d: string, thickness: number, isWhite: boolean) => {
       interface PathSegment {
         type: 'L' | 'Q' | 'C';
         start: { x: number; y: number };
@@ -2213,7 +2229,6 @@ function MainApp() {
             }
           });
 
-          // Filter out consecutive duplicate points
           const filteredPts: { x: number; y: number }[] = [];
           pts.forEach((pt) => {
             if (filteredPts.length === 0) {
@@ -2237,7 +2252,6 @@ function MainApp() {
             return;
           }
 
-          // Precompute segment normals and tangents
           const segNormals: { x: number; y: number }[] = [];
           const segTangents: { x: number; y: number }[] = [];
           for (let i = 0; i < nPts - 1; i++) {
@@ -2367,6 +2381,62 @@ function MainApp() {
           }
         });
       }
+    };
+
+    // 4. Paths
+    const pathTags = art.svg.match(/<path[^>]*>/gi) || [];
+    for (const tag of pathTags) {
+      const dMatch = tag.match(/d=["']([^"']+)["']/i);
+      if (!dMatch) continue;
+      const d = dMatch[1];
+      
+      const isStrokeOnly = (tag.includes('fill="none"') || tag.includes("fill='none'")) && !tag.includes('fill-rule="evenodd"');
+      const swMatch = tag.match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
+      const thickness = (isStrokeOnly && swMatch) ? Number(swMatch[1]) * scale : 0;
+      const isWhite = checkIsWhite(tag);
+      
+      parsePathD(d, thickness, isWhite);
+      drew = true;
+    }
+
+    // 5. Polygons
+    const polygonTags = art.svg.match(/<polygon[^>]*>/gi) || [];
+    for (const tag of polygonTags) {
+      const ptsMatch = tag.match(/points=["']([^"']+)["']/i);
+      if (!ptsMatch) continue;
+      const coords = ptsMatch[1].trim().split(/[\s,]+/).map(Number);
+      if (coords.length < 4 || coords.some(isNaN)) continue;
+      
+      let d = `M ${coords[0]} ${coords[1]}`;
+      for (let i = 2; i < coords.length; i += 2) {
+        if (i + 1 >= coords.length) break;
+        d += ` L ${coords[i]} ${coords[i+1]}`;
+      }
+      d += " Z";
+      
+      const isWhite = checkIsWhite(tag);
+      parsePathD(d, 0, isWhite);
+      drew = true;
+    }
+
+    // 6. Polylines
+    const polylineTags = art.svg.match(/<polyline[^>]*>/gi) || [];
+    for (const tag of polylineTags) {
+      const ptsMatch = tag.match(/points=["']([^"']+)["']/i);
+      if (!ptsMatch) continue;
+      const coords = ptsMatch[1].trim().split(/[\s,]+/).map(Number);
+      if (coords.length < 4 || coords.some(isNaN)) continue;
+      
+      let d = `M ${coords[0]} ${coords[1]}`;
+      for (let i = 2; i < coords.length; i += 2) {
+        if (i + 1 >= coords.length) break;
+        d += ` L ${coords[i]} ${coords[i+1]}`;
+      }
+      
+      const swMatch = tag.match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
+      const sw = swMatch ? Number(swMatch[1]) * scale : 10 * scale;
+      const isWhite = checkIsWhite(tag);
+      parsePathD(d, sw, isWhite);
       drew = true;
     }
 
