@@ -2213,10 +2213,123 @@ function MainApp() {
             }
           });
 
-          // Draw thick overlapping capsule segments along sampled points
-          for (let i = 0; i < pts.length - 1; i++) {
-            drawThickSegment(pts[i], pts[i + 1], thickness, isWhite);
+          // Filter out consecutive duplicate points
+          const filteredPts: { x: number; y: number }[] = [];
+          pts.forEach((pt) => {
+            if (filteredPts.length === 0) {
+              filteredPts.push(pt);
+            } else {
+              const last = filteredPts[filteredPts.length - 1];
+              if (Math.hypot(pt.x - last.x, pt.y - last.y) > 0.1) {
+                filteredPts.push(pt);
+              }
+            }
+          });
+
+          const nPts = filteredPts.length;
+          if (nPts === 0) return;
+
+          const r = thickness / 2;
+          const k = r * 0.5522848;
+
+          if (nPts === 1) {
+            drawCircle(filteredPts[0].x, filteredPts[0].y, r, isWhite);
+            return;
           }
+
+          // Precompute segment normals and tangents
+          const segNormals: { x: number; y: number }[] = [];
+          const segTangents: { x: number; y: number }[] = [];
+          for (let i = 0; i < nPts - 1; i++) {
+            const p1 = filteredPts[i];
+            const p2 = filteredPts[i + 1];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const tx = dx / len;
+            const ty = dy / len;
+            segTangents.push({ x: tx, y: ty });
+            segNormals.push({ x: -ty, y: tx });
+          }
+
+          const getLeftStart = (i: number) => {
+            const n = segNormals[i];
+            return { x: filteredPts[i].x + n.x * r, y: filteredPts[i].y + n.y * r };
+          };
+          const getLeftEnd = (i: number) => {
+            const n = segNormals[i];
+            return { x: filteredPts[i + 1].x + n.x * r, y: filteredPts[i + 1].y + n.y * r };
+          };
+          const getRightStart = (i: number) => {
+            const n = segNormals[i];
+            return { x: filteredPts[i].x - n.x * r, y: filteredPts[i].y - n.y * r };
+          };
+          const getRightEnd = (i: number) => {
+            const n = segNormals[i];
+            return { x: filteredPts[i + 1].x - n.x * r, y: filteredPts[i + 1].y - n.y * r };
+          };
+
+          if (isWhite) {
+            const startPt = getRightStart(0);
+            path.moveTo(startPt.x, startPt.y);
+
+            const p0 = filteredPts[0];
+            const t0 = segTangents[0];
+            const n0 = segNormals[0];
+            path.bezierCurveTo(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
+            path.bezierCurveTo(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
+
+            for (let i = 0; i < nPts - 1; i++) {
+              const ptStart = getLeftStart(i);
+              const ptEnd = getLeftEnd(i);
+              path.lineTo(ptStart.x, ptStart.y);
+              path.lineTo(ptEnd.x, ptEnd.y);
+            }
+
+            const pLast = filteredPts[nPts - 1];
+            const tLast = segTangents[nPts - 2];
+            const nLast = segNormals[nPts - 2];
+            path.bezierCurveTo(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
+            path.bezierCurveTo(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r - tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
+
+            for (let i = nPts - 2; i >= 0; i--) {
+              const ptEnd = getRightEnd(i);
+              const ptStart = getRightStart(i);
+              path.lineTo(ptEnd.x, ptEnd.y);
+              path.lineTo(ptStart.x, ptStart.y);
+            }
+          } else {
+            const startPt = getLeftStart(0);
+            path.moveTo(startPt.x, startPt.y);
+
+            for (let i = 0; i < nPts - 1; i++) {
+              const ptStart = getLeftStart(i);
+              const ptEnd = getLeftEnd(i);
+              path.lineTo(ptStart.x, ptStart.y);
+              path.lineTo(ptEnd.x, ptEnd.y);
+            }
+
+            const pLast = filteredPts[nPts - 1];
+            const tLast = segTangents[nPts - 2];
+            const nLast = segNormals[nPts - 2];
+            path.bezierCurveTo(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
+            path.bezierCurveTo(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r - tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
+
+            for (let i = nPts - 2; i >= 0; i--) {
+              const ptEnd = getRightEnd(i);
+              const ptStart = getRightStart(i);
+              path.lineTo(ptEnd.x, ptEnd.y);
+              path.lineTo(ptStart.x, ptStart.y);
+            }
+
+            const p0 = filteredPts[0];
+            const t0 = segTangents[0];
+            const n0 = segNormals[0];
+            path.bezierCurveTo(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
+            path.bezierCurveTo(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
+          }
+
+          path.close();
         });
       } else {
         contours.forEach((contour) => {
