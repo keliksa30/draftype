@@ -41,6 +41,7 @@ import {
   applyAutoKerning,
   applyAutoNeatMap,
   getGlyphBounds,
+  computeGlyphAdvance,
   loadSvgToBrickGrid,
   readFileAsDataUrl,
   getCalligraphyPath,
@@ -2416,30 +2417,8 @@ function MainApp() {
       new opentype.Glyph({ name: "space", unicode: 32, advanceWidth: 360 }),
       ...dynamicGlyphs.map((glyph) => {
         const art = glyphMap[glyph] ?? emptyGlyph();
-        const bounds = getGlyphBounds(art.svg);
-        const unitsPerGrid = 1000 / (bounds.gridWidth || 16);
-        // The "natural" left side bearing in OTF space = minX * scale_in_makeExportPath
-        // makeExportPath uses: x = 150 + (tx) * scale, where tx comes from the grid coords
-        // So the natural left edge of pixels = 150 + minX * glyphScale
-        // glyphScale = (art.scale/100) * (700 / max(viewWidth,viewHeight))
-        const glyphScaleFactor = (art.scale / 100) * (700 / Math.max(bounds.gridWidth, bounds.gridHeight, 1));
-        const desiredLSB = 70; // 70 units out of 1000 EM (7% of EM) for balanced spacing
-        const naturalLeft = 150 + bounds.minX * glyphScaleFactor;
-        const xShiftProportional = desiredLSB - naturalLeft;
-
-        let advanceWidth: number;
-        let artWithShift: GlyphArt & { _xShift?: number };
-
-        if (exportSpacingMode === "monospace") {
-          advanceWidth = Math.round(unitsPerGrid * bounds.gridWidth);
-          artWithShift = { ...art, _xShift: 0 };
-        } else {
-          const contentWidthOTF = (bounds.maxX - bounds.minX) * glyphScaleFactor;
-          advanceWidth = bounds.isEmpty
-            ? 650
-            : Math.round(desiredLSB + contentWidthOTF + desiredLSB) + (art.kerning ?? 0) * 8;
-          artWithShift = { ...art, _xShift: xShiftProportional };
-        }
+        const { advanceWidth, xShift } = computeGlyphAdvance(art, exportSpacingMode);
+        const artWithShift = { ...art, _xShift: xShift };
 
         return new opentype.Glyph({
           name: `glyph-${glyph.charCodeAt(0)}`,

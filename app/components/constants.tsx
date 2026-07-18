@@ -345,11 +345,20 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
   // 2. Process path-based glyphs (for freehand/handwriting curves)
   const pathPattern = /<path[^>]*d=["']([^"']+)["'][^>]*>/gi;
   for (const match of svgString.matchAll(pathPattern)) {
+    const pathTag = match[0];
     const d = match[1];
+    
+    // Extract stroke width
+    const strokeMatch = pathTag.match(/stroke-?width=["']([\d.]+)["']/i);
+    const strokeWidth = strokeMatch ? parseFloat(strokeMatch[1]) : 0;
+    const halfStroke = strokeWidth / 2;
+
     const regex = /([MmLlHhVvQqCcZz])\s*([0-9eE\s,.-]*)/g;
     let cmdMatch;
     let currX = 0;
     let currY = 0;
+    let pathMinX = Infinity;
+    let pathMaxX = -Infinity;
     
     while ((cmdMatch = regex.exec(d)) !== null) {
       const cmd = cmdMatch[1];
@@ -371,8 +380,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           }
           currX = x;
           currY = y;
-          minX = Math.min(minX, currX);
-          maxX = Math.max(maxX, currX);
+          pathMinX = Math.min(pathMinX, currX);
+          pathMaxX = Math.max(pathMaxX, currX);
         }
       } else if (cmdUpper === 'H') {
         const isRelative = cmd === 'h';
@@ -380,8 +389,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           let x = args[i];
           if (isRelative) x += currX;
           currX = x;
-          minX = Math.min(minX, currX);
-          maxX = Math.max(maxX, currX);
+          pathMinX = Math.min(pathMinX, currX);
+          pathMaxX = Math.max(pathMaxX, currX);
         }
       } else if (cmdUpper === 'V') {
         const isRelative = cmd === 'v';
@@ -389,8 +398,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           let y = args[i];
           if (isRelative) y += currY;
           currY = y;
-          minX = Math.min(minX, currX);
-          maxX = Math.max(maxX, currX);
+          pathMinX = Math.min(pathMinX, currX);
+          pathMaxX = Math.max(pathMaxX, currX);
         }
       } else if (cmdUpper === 'Q') {
         const isRelative = cmd === 'q';
@@ -406,8 +415,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
             x += currX;
             y += currY;
           }
-          minX = Math.min(minX, cx, x);
-          maxX = Math.max(maxX, cx, x);
+          pathMinX = Math.min(pathMinX, cx, x);
+          pathMaxX = Math.max(pathMaxX, cx, x);
           currX = x;
           currY = y;
         }
@@ -429,12 +438,17 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
             x += currX;
             y += currY;
           }
-          minX = Math.min(minX, cx1, cx2, x);
-          maxX = Math.max(maxX, cx1, cx2, x);
+          pathMinX = Math.min(pathMinX, cx1, cx2, x);
+          pathMaxX = Math.max(pathMaxX, cx1, cx2, x);
           currX = x;
           currY = y;
         }
       }
+    }
+
+    if (pathMinX !== Infinity && pathMaxX !== -Infinity) {
+      minX = Math.min(minX, pathMinX - halfStroke);
+      maxX = Math.max(maxX, pathMaxX + halfStroke);
     }
   }
 
@@ -443,6 +457,36 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
   }
 
   return { minX, maxX, gridWidth, gridHeight, isEmpty: false };
+};
+
+export const computeGlyphAdvance = (
+  art: GlyphArt,
+  exportSpacingMode: "proportional" | "monospace",
+): { advanceWidth: number; xShift: number } => {
+  const bounds = getGlyphBounds(art.svg);
+  const unitsPerGrid = 1000 / (bounds.gridWidth || 16);
+  const glyphScaleFactor = (art.scale / 100) * (700 / Math.max(bounds.gridWidth, bounds.gridHeight, 1));
+  const desiredLSB = 70; // 70 units out of 1000 EM (7% of EM) for balanced spacing
+
+  if (exportSpacingMode === "monospace") {
+    return {
+      advanceWidth: Math.round(unitsPerGrid * bounds.gridWidth),
+      xShift: 0,
+    };
+  }
+
+  const contentWidthOTF = (bounds.maxX - bounds.minX) * glyphScaleFactor;
+  const advanceWidth = bounds.isEmpty
+    ? 650
+    : Math.round(desiredLSB + contentWidthOTF + desiredLSB) + (art.kerning ?? 0) * 8;
+
+  const naturalLeft = 150 + bounds.minX * glyphScaleFactor;
+  const xShiftProportional = desiredLSB - naturalLeft;
+
+  return {
+    advanceWidth,
+    xShift: xShiftProportional,
+  };
 };
 
 export const cropSvgToAdvance = (
