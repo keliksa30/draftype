@@ -783,7 +783,7 @@ function MainApp() {
   };
 
   const runAutotraceForImage = async (imgUrl: string) => {
-    const size = 96;
+    const size = traceStyle === "pixel" ? 96 : 512;
     const result = await drawImageToCanvas(imgUrl, size);
     if (!result) return;
     const svg = await runSmoothTrace(result.canvas);
@@ -863,8 +863,6 @@ function MainApp() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
     ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, size, size);
     const ratio = Math.min(size / image.width, size / image.height);
     const width = image.width * ratio;
     const height = image.height * ratio;
@@ -968,18 +966,9 @@ function MainApp() {
     ctx.putImageData(imageData, 0, 0);
     const cleaned = canvas.toDataURL("image/png");
     setUploadedImage(cleaned);
-    const imgSvg = makeImageSvg(cleaned);
-    setWorkingSvg(imgSvg);
-    setGlyphMap((current) =>
-      applyAutoKerning({
-        ...current,
-        [activeGlyph]: {
-          ...(current[activeGlyph] ?? emptyGlyph()),
-          svg: imgSvg,
-        },
-      }),
-    );
-    setTraceStatus("Background removed");
+    setTraceStatus("Background removed. Re-tracing...");
+    await runAutotraceForImage(cleaned);
+    setTraceStatus("Background removed & image re-traced successfully!");
   };
 
   const autotraceImage = async () => {
@@ -988,7 +977,7 @@ function MainApp() {
       return;
     }
     pushWorkHistory();
-    const size = 96;
+    const size = traceStyle === "pixel" ? 96 : 512;
     const result = await drawImageToCanvas(uploadedImage, size);
     if (!result) return;
     const data = result.ctx.getImageData(0, 0, size, size).data;
@@ -2550,7 +2539,7 @@ function MainApp() {
 
   const autoVectorizeImageUrl = async (imgUrl: string): Promise<string | null> => {
     try {
-      const size = 96;
+      const size = traceStyle === "pixel" ? 96 : 512;
       const result = await drawImageToCanvas(imgUrl, size);
       if (!result) return null;
       return await runSmoothTrace(result.canvas);
