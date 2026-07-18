@@ -586,7 +586,27 @@ export const translations: TranslationDict = {
   tool_eraser: { id: "Penghapus", en: "Eraser" },
   tool_eraser_hint: { id: "Hapus titik-titik terdekat", en: "Erase nearby points" },
   tool_fill: { id: "Isi", en: "Fill" },
-  tool_fill_hint: { id: "Warnai bentuk saat ini dengan warna hitam", en: "Fill current shape with solid color" }
+  tool_fill_hint: { id: "Warnai bentuk saat ini dengan warna hitam", en: "Fill current shape with solid color" },
+  custom_glyph_trigger: {
+    id: "custom glyph? cobain deh",
+    en: "custom glyph? try this"
+  },
+  custom_glyph_prompt: {
+    id: "Masukkan karakter kustom yang ingin ditambahkan (maksimal 3 karakter, pisahkan dengan spasi jika lebih dari satu):",
+    en: "Enter custom characters to add (max 3 characters, separated by space if more than one):"
+  },
+  custom_glyph_success: {
+    id: "Karakter berhasil ditambahkan!",
+    en: "Character(s) added successfully!"
+  },
+  custom_glyph_error_length: {
+    id: "Masukkan minimal 1 karakter!",
+    en: "Please enter at least 1 character!"
+  },
+  custom_glyph_error_exists: {
+    id: "Karakter '{char}' sudah ada dalam daftar!",
+    en: "Character '{char}' is already in the list!"
+  }
 };
 
 interface I18nContextType {

@@ -84,6 +84,7 @@ export default function Home() {
   const [smoothness, setSmoothness] = useState(22);
   const [drawPoints, setDrawPoints] = useState<DrawPoint[]>([]);
   const activeStrokePointsRef = useRef<DrawPoint[]>([]);
+  const [dynamicGlyphs, setDynamicGlyphs] = useState<string[]>(glyphs);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingFilled, setDrawingFilled] = useState(false);
   const [nextPenMove, setNextPenMove] = useState(true);
@@ -210,6 +211,14 @@ export default function Home() {
           const loadedGlyphMap = obj.glyphMap ?? {};
           const loadedBrickGrids = obj.brickGrids ?? {};
           const loadedKerningPairs = obj.kerningPairs ?? {};
+
+          const uniqueGlyphs = Array.from(
+            new Set([
+              ...glyphs,
+              ...Object.keys(loadedGlyphMap).filter((k) => k.length === 1),
+            ])
+          );
+          setDynamicGlyphs(uniqueGlyphs);
 
           setGlyphMap(loadedGlyphMap);
           setActiveGlyph(obj.activeGlyph ?? "A");
@@ -468,6 +477,14 @@ export default function Home() {
       const loadedBrickGrids = obj.brickGrids ?? {};
       const loadedKerningPairs = obj.kerningPairs ?? {};
 
+      const uniqueGlyphs = Array.from(
+        new Set([
+          ...glyphs,
+          ...Object.keys(loadedGlyphMap).filter((k) => k.length === 1),
+        ])
+      );
+      setDynamicGlyphs(uniqueGlyphs);
+
       setGlyphMap(loadedGlyphMap);
       setActiveGlyph(obj.activeGlyph ?? "A");
       setBrickGrids(loadedBrickGrids);
@@ -565,7 +582,7 @@ export default function Home() {
   // ─── Assign Working SVG (TypeTapToe) ─────────────────────────────────────────
 
   const applyNewSvgToMap = (current: Record<string, GlyphArt>, svg: string) => {
-    const firstGlyphId = glyphs.find((g) => g !== activeGlyph && current[g]?.svg);
+    const firstGlyphId = dynamicGlyphs.find((g) => g !== activeGlyph && current[g]?.svg);
     const reference = firstGlyphId ? current[firstGlyphId] : null;
 
     const updatedGlyph = {
@@ -1263,6 +1280,7 @@ export default function Home() {
         setDrawHistory([]);
         setDrawHistoryIndex(-1);
         setBrickGrids({});
+        setDynamicGlyphs(glyphs);
         if (typeof window !== "undefined") {
           localStorage.clear();
         }
@@ -1287,10 +1305,49 @@ export default function Home() {
         setDrawHistory([]);
         setDrawHistoryIndex(-1);
         setBrickGrids({});
+        setDynamicGlyphs(glyphs);
         setExportStatus("All glyphs cleared.");
         clearDraftFromDB().catch(console.error);
       }
     );
+  };
+
+  const handleAddCustomGlyphs = (input: string) => {
+    const charsToAdd = input.trim().split(/\s+/).filter(Boolean);
+    if (charsToAdd.length === 0) {
+      alert(t("custom_glyph_error_length"));
+      return;
+    }
+    
+    const newGlyphs = [...dynamicGlyphs];
+    let addedAny = false;
+    let lastChar = activeGlyph;
+
+    for (const char of charsToAdd) {
+      if (char.length !== 1) continue;
+      if (newGlyphs.includes(char)) {
+        alert(t("custom_glyph_error_exists").replace("{char}", char));
+        continue;
+      }
+      newGlyphs.push(char);
+      lastChar = char;
+      addedAny = true;
+    }
+
+    if (addedAny) {
+      setDynamicGlyphs(newGlyphs);
+      setGlyphMap((current) => {
+        const next = { ...current };
+        charsToAdd.forEach((char) => {
+          if (char.length === 1 && !next[char]) {
+            next[char] = emptyGlyph();
+          }
+        });
+        return next;
+      });
+      setActiveGlyph(lastChar);
+      setExportStatus(t("custom_glyph_success"));
+    }
   };
 
   const revertFingerPlacement = () => {
@@ -1435,7 +1492,7 @@ export default function Home() {
         const font = opentype.parse(arrayBuffer);
 
         const newGlyphMap = { ...glyphMap };
-        glyphs.forEach((char) => {
+        dynamicGlyphs.forEach((char) => {
           const glyph = font.charToGlyph(char);
           if (glyph) {
             const path = glyph.getPath(0, 850, 1000);
@@ -1779,7 +1836,7 @@ export default function Home() {
     setRevertGlyphMap(glyphMap);
     const activeArt = glyphMap[activeGlyph] ?? emptyGlyph();
     const nextGlyphMap = { ...glyphMap };
-    glyphs.forEach((glyph) => {
+    dynamicGlyphs.forEach((glyph) => {
       const item = nextGlyphMap[glyph] ?? emptyGlyph();
       nextGlyphMap[glyph] = {
         ...item,
@@ -2221,7 +2278,7 @@ export default function Home() {
     const exportedGlyphs = [
       new opentype.Glyph({ name: ".notdef", advanceWidth: 650 }),
       new opentype.Glyph({ name: "space", unicode: 32, advanceWidth: 360 }),
-      ...glyphs.map((glyph) => {
+      ...dynamicGlyphs.map((glyph) => {
         const art = glyphMap[glyph] ?? emptyGlyph();
         const bounds = getGlyphBounds(art.svg);
         const unitsPerGrid = 1000 / (bounds.gridWidth || 16);
@@ -2304,9 +2361,9 @@ export default function Home() {
     });
   };
 
-  const activeIndex = glyphs.indexOf(activeGlyph);
-  const prevGlyph = activeIndex > 0 ? glyphs[activeIndex - 1] : null;
-  const nextGlyph = activeIndex < glyphs.length - 1 ? glyphs[activeIndex + 1] : null;
+  const activeIndex = dynamicGlyphs.indexOf(activeGlyph);
+  const prevGlyph = activeIndex > 0 ? dynamicGlyphs[activeIndex - 1] : null;
+  const nextGlyph = activeIndex < dynamicGlyphs.length - 1 ? dynamicGlyphs[activeIndex + 1] : null;
   const prevGlyphSvg = prevGlyph ? glyphMap[prevGlyph]?.svg : "";
   const nextGlyphSvg = nextGlyph ? glyphMap[nextGlyph]?.svg : "";
 
@@ -2492,7 +2549,7 @@ export default function Home() {
             </>
           )}
           <GlyphStrip
-            glyphs={glyphs}
+            glyphs={dynamicGlyphs}
             glyphMap={glyphMap}
             activeGlyph={activeGlyph}
             setActiveGlyph={setActiveGlyph}
@@ -2501,6 +2558,7 @@ export default function Home() {
             scrollGlyphStrip={scrollGlyphStrip}
             setGlyphStripScroll={setGlyphStripScroll}
             updateGlyphScroll={updateGlyphScroll}
+            onAddCustomGlyph={handleAddCustomGlyphs}
           />
           <LivePreview
             previewText={previewText}

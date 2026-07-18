@@ -12,6 +12,7 @@ interface GlyphStripProps {
   scrollGlyphStrip: (direction: -1 | 1) => void;
   setGlyphStripScroll: (val: number) => void;
   updateGlyphScroll: () => void;
+  onAddCustomGlyph: (input: string) => void;
 }
 
 export default function GlyphStrip({
@@ -24,6 +25,7 @@ export default function GlyphStrip({
   scrollGlyphStrip,
   setGlyphStripScroll,
   updateGlyphScroll,
+  onAddCustomGlyph,
 }: GlyphStripProps) {
   const { t } = useI18n();
 
@@ -84,6 +86,31 @@ export default function GlyphStrip({
           aria-label="Next glyphs"
         >
           <span aria-hidden="true" />
+        </button>
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: "10px" }}>
+        <button
+          className="custom-glyph-trigger-btn"
+          style={{
+            fontSize: "0.78rem",
+            fontWeight: "900",
+            color: "var(--red)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+            textDecoration: "underline",
+          }}
+          onClick={() => {
+            const input = prompt(t("custom_glyph_prompt"));
+            if (input !== null) {
+              onAddCustomGlyph(input);
+            }
+          }}
+        >
+          {t("custom_glyph_trigger")}
         </button>
       </div>
     </>
