@@ -50,6 +50,8 @@ import {
 import { saveDraftToDB, loadDraftFromDB, clearDraftFromDB } from "./utils/db";
 import { translations, Lang, I18nProvider, useI18n } from "./utils/i18n";
 
+let potraceInitPromise: Promise<any> | null = null;
+
 function MainApp() {
   const [mode, setMode] = useState<Mode>("typeTapToe");
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
@@ -608,11 +610,77 @@ function MainApp() {
 
   // ─── File Upload Handlers ────────────────────────────────────────────────────
 
-  const runAutotraceForImage = async (imgUrl: string) => {
-    const size = 96;
-    const result = await drawImageToCanvas(imgUrl, size);
-    if (!result) return;
-    const data = result.ctx.getImageData(0, 0, size, size).data;
+  const getPreprocessedBlackAndWhiteCanvas = (srcCanvas: HTMLCanvasElement) => {
+    const size = srcCanvas.width;
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = size;
+    tempCanvas.height = size;
+    const tempCtx = tempCanvas.getContext("2d");
+    if (!tempCtx) return srcCanvas;
+
+    tempCtx.drawImage(srcCanvas, 0, 0);
+    const imgData = tempCtx.getImageData(0, 0, size, size);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const alpha = data[i + 3];
+      const darkness = 255 - (data[i] + data[i + 1] + data[i + 2]) / 3;
+      if (alpha > traceAlpha && darkness > traceThreshold) {
+        data[i] = 0;
+        data[i + 1] = 0;
+        data[i + 2] = 0;
+        data[i + 3] = 255;
+      } else {
+        data[i] = 255;
+        data[i + 1] = 255;
+        data[i + 2] = 255;
+        data[i + 3] = 255;
+      }
+    }
+    tempCtx.putImageData(imgData, 0, 0);
+    return tempCanvas;
+  };
+
+  const traceCanvasWithPotrace = async (canvas: HTMLCanvasElement): Promise<string | null> => {
+    try {
+      const bwCanvas = getPreprocessedBlackAndWhiteCanvas(canvas);
+      const { potrace, init } = await import("esm-potrace-wasm");
+      if (!potraceInitPromise) {
+        potraceInitPromise = init();
+      }
+      await potraceInitPromise;
+
+      const svg = await potrace(bwCanvas, {
+        turdsize: 2,
+        turnpolicy: 4,
+        optcurve: true,
+        opttolerance: 0.2,
+      });
+      return svg;
+    } catch (e) {
+      console.error("Potrace failed, falling back to Marching Squares:", e);
+      return null;
+    }
+  };
+
+  const runSmoothTrace = async (canvas: HTMLCanvasElement): Promise<string> => {
+    const potraceResult = await traceCanvasWithPotrace(canvas);
+    if (potraceResult) {
+      let processed = potraceResult;
+      if (processed.includes('fill="black"')) {
+        processed = processed.replace('fill="black"', 'fill="currentColor" fill-rule="evenodd"');
+      } else if (processed.includes("fill='black'")) {
+        processed = processed.replace("fill='black'", 'fill="currentColor" fill-rule="evenodd"');
+      } else if (!processed.includes("fill=")) {
+        processed = processed.replace('<path ', '<path fill="currentColor" fill-rule="evenodd" ');
+      }
+      return processed;
+    }
+
+    const size = canvas.width;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+    const data = ctx.getImageData(0, 0, size, size).data;
 
     const isDark = (x: number, y: number) => {
       if (x < 0 || x >= size || y < 0 || y >= size) return false;
@@ -709,10 +777,17 @@ function MainApp() {
       paths.push(loop);
     }
 
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" fill="none"><path d="${paths.join(
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" fill="none"><path d="${paths.join(
       " "
     )}" fill="currentColor" fill-rule="evenodd"/></svg>`;
-    
+  };
+
+  const runAutotraceForImage = async (imgUrl: string) => {
+    const size = 96;
+    const result = await drawImageToCanvas(imgUrl, size);
+    if (!result) return;
+    const svg = await runSmoothTrace(result.canvas);
+
     setWorkingSvg(svg);
     setGlyphMap((current) =>
       applyAutoKerning({
@@ -944,109 +1019,11 @@ function MainApp() {
       setGlyphMap((current) => applyNewSvgToMap(current, svg));
       setTraceStatus(`Autotraced ${rects.length} pixels`);
     } else {
-      // Smooth Contour Autotrace (Marching Squares)
-      const isDark = (x: number, y: number) => {
-        if (x < 0 || x >= size || y < 0 || y >= size) return false;
-        const idx = (y * size + x) * 4;
-        const alpha = data[idx + 3];
-        const darkness = 255 - (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-        return alpha > traceAlpha && darkness > traceThreshold;
-      };
-
-      const segments: [number, number, number, number][] = [];
-
-      for (let y = 0; y < size - 1; y += 1) {
-        for (let x = 0; x < size - 1; x += 1) {
-          const p0 = isDark(x, y) ? 1 : 0;
-          const p1 = isDark(x + 1, y) ? 1 : 0;
-          const p2 = isDark(x + 1, y + 1) ? 1 : 0;
-          const p3 = isDark(x, y + 1) ? 1 : 0;
-
-          const caseIndex = p0 * 8 + p1 * 4 + p2 * 2 + p3 * 1;
-          if (caseIndex === 0 || caseIndex === 15) continue;
-
-          // Midpoints of cell edges
-          const t: [number, number] = [x + 0.5, y];
-          const r: [number, number] = [x + 1, y + 0.5];
-          const b: [number, number] = [x + 0.5, y + 1];
-          const l: [number, number] = [x, y + 0.5];
-
-          if (caseIndex === 1) segments.push([l[0], l[1], b[0], b[1]]);
-          else if (caseIndex === 2) segments.push([b[0], b[1], r[0], r[1]]);
-          else if (caseIndex === 3) segments.push([l[0], l[1], r[0], r[1]]);
-          else if (caseIndex === 4) segments.push([t[0], t[1], r[0], r[1]]);
-          else if (caseIndex === 5) {
-            segments.push([l[0], l[1], t[0], t[1]]);
-            segments.push([b[0], b[1], r[0], r[1]]);
-          } else if (caseIndex === 6) segments.push([t[0], t[1], b[0], b[1]]);
-          else if (caseIndex === 7) segments.push([l[0], l[1], t[0], t[1]]);
-          else if (caseIndex === 8) segments.push([l[0], l[1], t[0], t[1]]);
-          else if (caseIndex === 9) segments.push([t[0], t[1], b[0], b[1]]);
-          else if (caseIndex === 10) {
-            segments.push([l[0], l[1], b[0], b[1]]);
-            segments.push([t[0], t[1], r[0], r[1]]);
-          } else if (caseIndex === 11) segments.push([t[0], t[1], r[0], r[1]]);
-          else if (caseIndex === 12) segments.push([l[0], l[1], r[0], r[1]]);
-          else if (caseIndex === 13) segments.push([b[0], b[1], r[0], r[1]]);
-          else if (caseIndex === 14) segments.push([l[0], l[1], b[0], b[1]]);
-        }
-      }
-
-      const paths: string[] = [];
-      const visited = new Set<number>();
-      const scaleCoord = 100;
-      const hashPoint = (px: number, py: number) =>
-        `${Math.round(px * scaleCoord)},${Math.round(py * scaleCoord)}`;
-      const pointToSegments = new Map<string, number[]>();
-
-      segments.forEach((seg, idx) => {
-        const p1 = hashPoint(seg[0], seg[1]);
-        const p2 = hashPoint(seg[2], seg[3]);
-        if (!pointToSegments.has(p1)) pointToSegments.set(p1, []);
-        if (!pointToSegments.has(p2)) pointToSegments.set(p2, []);
-        pointToSegments.get(p1)!.push(idx);
-        pointToSegments.get(p2)!.push(idx);
-      });
-
-      for (let i = 0; i < segments.length; i += 1) {
-        if (visited.has(i)) continue;
-        const [sx, sy, ex, ey] = segments[i];
-        visited.add(i);
-        let loop = `M${sx.toFixed(1)} ${sy.toFixed(1)}`;
-        let currentHash = hashPoint(ex, ey);
-        loop += ` L${ex.toFixed(1)} ${ey.toFixed(1)}`;
-        let found = true;
-        while (found) {
-          found = false;
-          const candidates = pointToSegments.get(currentHash) || [];
-          for (const nextIdx of candidates) {
-            if (!visited.has(nextIdx)) {
-              visited.add(nextIdx);
-              const nextSeg = segments[nextIdx];
-              const h1 = hashPoint(nextSeg[0], nextSeg[1]);
-              const h2 = hashPoint(nextSeg[2], nextSeg[3]);
-              if (h1 === currentHash) {
-                currentHash = h2;
-                loop += ` L${nextSeg[2].toFixed(1)} ${nextSeg[3].toFixed(1)}`;
-              } else {
-                currentHash = h1;
-                loop += ` L${nextSeg[0].toFixed(1)} ${nextSeg[1].toFixed(1)}`;
-              }
-              found = true;
-              break;
-            }
-          }
-        }
-        loop += " Z";
-        paths.push(loop);
-      }
-
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" fill="none"><path d="${paths.join(
-        " "
-      )}" fill="currentColor" fill-rule="evenodd"/></svg>`;
+      const svg = await runSmoothTrace(result.canvas);
       setWorkingSvg(svg);
       setGlyphMap((current) => applyNewSvgToMap(current, svg));
-      setTraceStatus(`Contour traced ${paths.length} loops`);
+      const loopsCount = (svg.match(/M/g) || []).length;
+      setTraceStatus(`Contour traced ${loopsCount} loops`);
     }
   };
 
@@ -2576,106 +2553,7 @@ function MainApp() {
       const size = 96;
       const result = await drawImageToCanvas(imgUrl, size);
       if (!result) return null;
-      const data = result.ctx.getImageData(0, 0, size, size).data;
-
-      const isDark = (x: number, y: number) => {
-        if (x < 0 || x >= size || y < 0 || y >= size) return false;
-        const idx = (y * size + x) * 4;
-        const alpha = data[idx + 3];
-        const darkness = 255 - (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-        return alpha > traceAlpha && darkness > traceThreshold;
-      };
-
-      const segments: [number, number, number, number][] = [];
-
-      for (let y = 0; y < size - 1; y += 1) {
-        for (let x = 0; x < size - 1; x += 1) {
-          const p0 = isDark(x, y) ? 1 : 0;
-          const p1 = isDark(x + 1, y) ? 1 : 0;
-          const p2 = isDark(x + 1, y + 1) ? 1 : 0;
-          const p3 = isDark(x, y + 1) ? 1 : 0;
-
-          const caseIndex = p0 * 8 + p1 * 4 + p2 * 2 + p3 * 1;
-          if (caseIndex === 0 || caseIndex === 15) continue;
-
-          const t: [number, number] = [x + 0.5, y];
-          const r: [number, number] = [x + 1, y + 0.5];
-          const b: [number, number] = [x + 0.5, y + 1];
-          const l: [number, number] = [x, y + 0.5];
-
-          if (caseIndex === 1) segments.push([l[0], l[1], b[0], b[1]]);
-          else if (caseIndex === 2) segments.push([b[0], b[1], r[0], r[1]]);
-          else if (caseIndex === 3) segments.push([l[0], l[1], r[0], r[1]]);
-          else if (caseIndex === 4) segments.push([t[0], t[1], r[0], r[1]]);
-          else if (caseIndex === 5) {
-            segments.push([l[0], l[1], t[0], t[1]]);
-            segments.push([b[0], b[1], r[0], r[1]]);
-          } else if (caseIndex === 6) segments.push([t[0], t[1], b[0], b[1]]);
-          else if (caseIndex === 7) segments.push([l[0], l[1], t[0], t[1]]);
-          else if (caseIndex === 8) segments.push([l[0], l[1], t[0], t[1]]);
-          else if (caseIndex === 9) segments.push([t[0], t[1], b[0], b[1]]);
-          else if (caseIndex === 10) {
-            segments.push([l[0], l[1], b[0], b[1]]);
-            segments.push([t[0], t[1], r[0], r[1]]);
-          } else if (caseIndex === 11) segments.push([t[0], t[1], r[0], r[1]]);
-          else if (caseIndex === 12) segments.push([l[0], l[1], r[0], r[1]]);
-          else if (caseIndex === 13) segments.push([b[0], b[1], r[0], r[1]]);
-          else if (caseIndex === 14) segments.push([l[0], l[1], b[0], b[1]]);
-        }
-      }
-
-      const paths: string[] = [];
-      const visited = new Set<number>();
-      const scaleCoord = 100;
-      const hashPoint = (px: number, py: number) =>
-        `${Math.round(px * scaleCoord)},${Math.round(py * scaleCoord)}`;
-      const pointToSegments = new Map<string, number[]>();
-
-      segments.forEach((seg, idx) => {
-        const p1 = hashPoint(seg[0], seg[1]);
-        const p2 = hashPoint(seg[2], seg[3]);
-        if (!pointToSegments.has(p1)) pointToSegments.set(p1, []);
-        if (!pointToSegments.has(p2)) pointToSegments.set(p2, []);
-        pointToSegments.get(p1)!.push(idx);
-        pointToSegments.get(p2)!.push(idx);
-      });
-
-      for (let i = 0; i < segments.length; i += 1) {
-        if (visited.has(i)) continue;
-        const [sx, sy, ex, ey] = segments[i];
-        visited.add(i);
-        let loop = `M${sx.toFixed(1)} ${sy.toFixed(1)}`;
-        let currentHash = hashPoint(ex, ey);
-        loop += ` L${ex.toFixed(1)} ${ey.toFixed(1)}`;
-        let found = true;
-        while (found) {
-          found = false;
-          const candidates = pointToSegments.get(currentHash) || [];
-          for (const nextIdx of candidates) {
-            if (!visited.has(nextIdx)) {
-              visited.add(nextIdx);
-              const nextSeg = segments[nextIdx];
-              const h1 = hashPoint(nextSeg[0], nextSeg[1]);
-              const h2 = hashPoint(nextSeg[2], nextSeg[3]);
-              if (h1 === currentHash) {
-                currentHash = h2;
-                loop += ` L${nextSeg[2].toFixed(1)} ${nextSeg[3].toFixed(1)}`;
-              } else {
-                currentHash = h1;
-                loop += ` L${nextSeg[0].toFixed(1)} ${nextSeg[1].toFixed(1)}`;
-              }
-              found = true;
-              break;
-            }
-          }
-        }
-        loop += " Z";
-        paths.push(loop);
-      }
-
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" fill="none"><path d="${paths.join(
-        " "
-      )}" fill="currentColor" fill-rule="evenodd"/></svg>`;
+      return await runSmoothTrace(result.canvas);
     } catch (e) {
       console.error(e);
       return null;
