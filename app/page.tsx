@@ -740,9 +740,19 @@ function MainApp() {
 
     const dataUrl = await readFileAsDataUrl(file);
     setUploadedImage(dataUrl);
-    setTraceStatus("Mengimpor dan mendeteksi gambar...");
-    await runAutotraceForImage(dataUrl);
-    setTraceStatus("Gambar berhasil di-import dan otomatis di-vectorize!");
+    const imgSvg = makeImageSvg(dataUrl);
+    setWorkingSvg(imgSvg);
+    setTraceStatus("Gambar di-load. Menunggu konfirmasi...");
+
+    setConfirmModal({
+      isOpen: true,
+      message: t("confirm_autotrace"),
+      onConfirm: async () => {
+        setTraceStatus("Mengimpor dan mendeteksi gambar...");
+        await runAutotraceForImage(dataUrl);
+        setTraceStatus("Gambar berhasil di-import dan otomatis di-vectorize!");
+      },
+    });
   };
 
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {

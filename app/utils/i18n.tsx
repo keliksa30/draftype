@@ -491,6 +491,10 @@ export const translations: TranslationDict = {
     id: "Yakin mau dihapus semuanya? Semua glyph yang telah Anda gambar akan dikosongkan.",
     en: "Are you sure you want to delete everything? All glyphs you drew will be cleared."
   },
+  confirm_autotrace: {
+    id: "Gambar terdeteksi. Apakah Anda ingin mengonversi gambar ini ke vektor (font) secara otomatis agar bisa diexport?",
+    en: "Image detected. Do you want to automatically convert this image to vectors (font) so it can be exported?"
+  },
   confirm_yes: {
     id: "sipp, aman",
     en: "yes, proceed"
