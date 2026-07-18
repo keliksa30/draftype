@@ -641,6 +641,23 @@ function MainApp() {
     return tempCanvas;
   };
 
+  const cleanPotraceSvg = (svg: string): string => {
+    let cleaned = svg;
+    cleaned = cleaned.replace(/<(rect|path)[^>]*\/>/gi, (tag) => {
+      const hasWhite = /fill=["']?(?:#ffffff|white|#fff|#FFF|#FFFFFF)["']/i.test(tag) || 
+                       /stroke=["']?(?:#ffffff|white|#fff|#FFF|#FFFFFF)["']/i.test(tag) ||
+                       /style=["']?[^"']*(?:fill|stroke|background):\s*(?:#ffffff|white|#fff|#FFF|#FFFFFF)/i.test(tag);
+      return hasWhite ? "" : tag;
+    });
+    cleaned = cleaned.replace(/<(rect|path)[^>]*>[\s\S]*?<\/\1>/gi, (tag) => {
+      const hasWhite = /fill=["']?(?:#ffffff|white|#fff|#FFF|#FFFFFF)["']/i.test(tag) || 
+                       /stroke=["']?(?:#ffffff|white|#fff|#FFF|#FFFFFF)["']/i.test(tag) ||
+                       /style=["']?[^"']*(?:fill|stroke|background):\s*(?:#ffffff|white|#fff|#FFF|#FFFFFF)/i.test(tag);
+      return hasWhite ? "" : tag;
+    });
+    return cleaned;
+  };
+
   const traceCanvasWithPotrace = async (canvas: HTMLCanvasElement): Promise<string | null> => {
     try {
       const bwCanvas = getPreprocessedBlackAndWhiteCanvas(canvas);
@@ -656,6 +673,9 @@ function MainApp() {
         optcurve: true,
         opttolerance: 0.2,
       });
+      if (svg) {
+        return cleanPotraceSvg(svg);
+      }
       return svg;
     } catch (e) {
       console.error("Potrace failed, falling back to Marching Squares:", e);
