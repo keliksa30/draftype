@@ -2348,7 +2348,7 @@ function MainApp() {
             const startAlpha = Math.atan2(startVy, startVx);
             const startStartAngle = startAlpha - Math.PI / 2;
             for (let step = 1; step <= 4; step++) {
-              const a = startStartAngle - step * (Math.PI / 4);
+              const a = startStartAngle + step * (Math.PI / 4);
               path.lineTo(startPt.x + r * Math.cos(a), startPt.y + r * Math.sin(a));
             }
           }

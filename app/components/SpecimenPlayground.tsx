@@ -48,16 +48,17 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
           const totalKern = individualKern + pairKern + letterSpacing;
 
           if (art?.svg) {
-            // Crop SVG to pixel bounding box for correct proportional advance width
-            const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 1.0);
+            // Crop SVG to bounding box with standard 6% sidebearing (matching live preview)
+            const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 0.06);
             const glyphW = widthRatio * fontSize;
-            const kern = (pairKern + letterSpacing) * (fontSize / 36);
+            // Apply total kerning (individual + pair + letter spacing)
+            const totalKernPx = totalKern * (fontSize / 36);
             return (
               <span
                 key={`letter-${letterIdx}`}
                 style={{
                   display: "inline-block",
-                  width: `${glyphW + kern}px`,
+                  width: `${Math.max(4, glyphW + totalKernPx)}px`,
                   height: `${fontSize}px`,
                   transform: art.y || art.rotation
                     ? `translateY(${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg)`
