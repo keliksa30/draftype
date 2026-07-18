@@ -300,6 +300,14 @@ export default function DrawingCanvas({
                   fill={drawingFilled ? "currentColor" : "none"}
                 />
               )}
+              <path
+                id="active-stroke-path"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+                style={{ pointerEvents: "none" }}
+              />
               {drawTool === "pen" && lastPenPoint && penPreviewPoint && !nextPenMove ? (
                 <line
                   className="pen-preview-line"

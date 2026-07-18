@@ -83,6 +83,7 @@ export default function Home() {
   const [fingerZoom, setFingerZoom] = useState(100);
   const [smoothness, setSmoothness] = useState(22);
   const [drawPoints, setDrawPoints] = useState<DrawPoint[]>([]);
+  const activeStrokePointsRef = useRef<DrawPoint[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingFilled, setDrawingFilled] = useState(false);
   const [nextPenMove, setNextPenMove] = useState(true);
@@ -1520,6 +1521,24 @@ export default function Home() {
       setIsDrawing(true);
       return;
     }
+    if (drawTool === "brush") {
+      activeStrokePointsRef.current = [{ ...point, move: true }];
+      const activePathEl = document.getElementById("active-stroke-path");
+      if (activePathEl) {
+        activePathEl.setAttribute("d", "");
+        if (penType === "calligraphy" || penType === "pointed") {
+          activePathEl.setAttribute("fill", "currentColor");
+          activePathEl.setAttribute("stroke", "currentColor");
+          activePathEl.setAttribute("stroke-width", "0.2");
+        } else {
+          activePathEl.setAttribute("fill", drawingFilled ? "currentColor" : "none");
+          activePathEl.setAttribute("stroke", "currentColor");
+          activePathEl.setAttribute("stroke-width", brushSize.toString());
+        }
+      }
+      setIsDrawing(true);
+      return;
+    }
     setDrawPoints((points) => [...points, { ...point, move: true }]);
     setIsDrawing(true);
   };
@@ -1571,13 +1590,25 @@ export default function Home() {
       return;
     }
     if (drawTool === "brush") {
-      setDrawPoints((points) => {
-        const last = points[points.length - 1];
-        if (last && Math.hypot(point.x - last.x, point.y - last.y) < 0.3) {
-          return points;
+      const last = activeStrokePointsRef.current[activeStrokePointsRef.current.length - 1];
+      if (last && Math.hypot(point.x - last.x, point.y - last.y) < 0.3) {
+        return;
+      }
+      activeStrokePointsRef.current.push({ ...point, move: false });
+
+      const activePathEl = document.getElementById("active-stroke-path");
+      if (activePathEl) {
+        let d = "";
+        const smoothed = smoothPoints(activeStrokePointsRef.current, smoothness);
+        if (penType === "calligraphy") {
+          d = getCalligraphyPath(smoothed, brushSize, penAngle);
+        } else if (penType === "pointed") {
+          d = getPointedPath(smoothed, brushSize);
+        } else {
+          d = pathFromPoints(smoothed);
         }
-        return [...points, { ...point, move: false }];
-      });
+        activePathEl.setAttribute("d", d);
+      }
     }
   };
 
@@ -1635,14 +1666,31 @@ export default function Home() {
     }
 
     if (isDrawing && (drawTool === "brush" || drawTool === "eraser" || drawTool === "move" || drawTool === "pen")) {
-      setDrawPoints((latestPoints) => {
-        setDrawHistory((prev) => {
-          const next = prev.slice(0, drawHistoryIndex + 1);
-          return [...next, { points: latestPoints, filled: drawingFilled }];
+      if (drawTool === "brush") {
+        const activePathEl = document.getElementById("active-stroke-path");
+        if (activePathEl) {
+          activePathEl.setAttribute("d", "");
+        }
+        const newPoints = activeStrokePointsRef.current;
+        setDrawPoints((prev) => {
+          const latestPoints = [...prev, ...newPoints];
+          setDrawHistory((prevHistory) => {
+            const next = prevHistory.slice(0, drawHistoryIndex + 1);
+            return [...next, { points: latestPoints, filled: drawingFilled }];
+          });
+          setDrawHistoryIndex((prevIndex) => prevIndex + 1);
+          return latestPoints;
         });
-        setDrawHistoryIndex((prevIndex) => prevIndex + 1);
-        return latestPoints;
-      });
+      } else {
+        setDrawPoints((latestPoints) => {
+          setDrawHistory((prev) => {
+            const next = prev.slice(0, drawHistoryIndex + 1);
+            return [...next, { points: latestPoints, filled: drawingFilled }];
+          });
+          setDrawHistoryIndex((prevIndex) => prevIndex + 1);
+          return latestPoints;
+        });
+      }
     }
     setIsDrawing(false);
     panStartRef.current = null;
