@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { GlyphArt } from "./types";
 import { cropSvgToAdvance } from "./constants";
+import { useI18n } from "../utils/i18n";
 
 interface SpecimenPlaygroundProps {
   glyphMap: Record<string, GlyphArt>;
@@ -10,6 +11,7 @@ interface SpecimenPlaygroundProps {
 }
 
 export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenPlaygroundProps) {
+  const { t } = useI18n();
   const [text, setText] = useState(
     "The quick brown fox jumps over the lazy dog.\n\n" +
     "DRAFTYPE - SANGAT PRESISI & PREMIUM.\n" +
@@ -107,7 +109,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
         }}
       >
         <label className="slider-row" style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem" }}>
-          Ukuran Font ({fontSize}px)
+          {t("font_size")} ({fontSize}px)
           <input
             type="range"
             min="16"
@@ -118,7 +120,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
         </label>
 
         <label className="slider-row" style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem" }}>
-          Tinggi Baris ({lineHeight})
+          {t("line_height")} ({lineHeight})
           <input
             type="range"
             min="1"
@@ -130,7 +132,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
         </label>
 
         <label className="slider-row" style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem" }}>
-          Jarak Huruf ({letterSpacing}px)
+          {t("letter_spacing")} ({letterSpacing}px)
           <input
             type="range"
             min="-10"
@@ -141,7 +143,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
         </label>
 
         <label className="slider-row" style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem" }}>
-          Jarak Kata ({wordSpacing}px)
+          {t("word_spacing")} ({wordSpacing}px)
           <input
             type="range"
             min="4"
@@ -152,7 +154,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
         </label>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.8rem" }}>
-          Rataan Paragraf
+          {t("align_paragraph")}
           <div style={{ display: "flex", gap: "4px" }}>
             {(["left", "center", "right"] as const).map((mode) => (
               <button
@@ -167,7 +169,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
                   textTransform: "capitalize",
                 }}
               >
-                {mode === "left" ? "Kiri" : mode === "center" ? "Tengah" : "Kanan"}
+                {mode === "left" ? t("align_left") : mode === "center" ? t("align_center") : t("align_right")}
               </button>
             ))}
           </div>
@@ -179,7 +181,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
         {/* Input Textarea */}
         <div style={{ display: "flex", flexDirection: "column" }}>
           <label style={{ fontSize: "0.78rem", marginBottom: "4px", color: "var(--ink)", fontWeight: "bold" }}>
-            Tulis Teks Pengujian di Sini:
+            {t("test_text_label")}
           </label>
           <textarea
             value={text}
@@ -214,7 +216,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
           }}
         >
           <label style={{ display: "block", fontSize: "0.78rem", marginBottom: "8px", opacity: 0.6, fontWeight: "bold" }}>
-            Hasil Cetak Specimen:
+            {t("print_specimen_label")}
           </label>
           
           <div

@@ -496,7 +496,97 @@ export const translations: TranslationDict = {
   confirm_no: {
     id: "bentar, jangan",
     en: "wait, cancel"
-  }
+  },
+  live_preview: {
+    id: "Pratinjau langsung",
+    en: "Live preview"
+  },
+  glyph_select_header: {
+    id: "Pilih huruf yang ingin didesain di sini",
+    en: "Select your glyphs here"
+  },
+  spacing_mode: {
+    id: "Mode Spasi Ekspor",
+    en: "Export Spacing Mode"
+  },
+  spacing_prop_title: {
+    id: "Setiap huruf memiliki lebar berdasarkan konten aslinya. Cocok untuk sebagian besar font.",
+    en: "Each character has advance width based on its actual pixel width + sidebearing. Best for most uses."
+  },
+  spacing_mono_title: {
+    id: "Semua huruf memiliki lebar tetap yang sama. Tampilan retro/mesin tik klasik.",
+    en: "All characters share the same fixed advance width. Classic pixel/typewriter look."
+  },
+  spacing_prop_desc: {
+    id: "Spasi proporsional — setiap huruf menggunakan lebar sesuai kontennya",
+    en: "Proportional spacing — each letter uses width based on its contents"
+  },
+  spacing_mono_desc: {
+    id: "Spasi tetap — semua huruf sama lebar (monospace/typewriter)",
+    en: "Fixed spacing — all letters share the same width (monospace/typewriter)"
+  },
+  guidelines_header: {
+    id: "Panduan Huruf Lengkap",
+    en: "Complete Glyph Guidelines"
+  },
+  font_size: {
+    id: "Ukuran Font",
+    en: "Font Size"
+  },
+  line_height: {
+    id: "Tinggi Baris",
+    en: "Line Height"
+  },
+  letter_spacing: {
+    id: "Jarak Huruf",
+    en: "Letter Spacing"
+  },
+  word_spacing: {
+    id: "Jarak Kata",
+    en: "Word Spacing"
+  },
+  align_paragraph: {
+    id: "Rataan Paragraf",
+    en: "Paragraph Alignment"
+  },
+  align_left: {
+    id: "Kiri",
+    en: "Left"
+  },
+  align_center: {
+    id: "Tengah",
+    en: "Center"
+  },
+  align_right: {
+    id: "Kanan",
+    en: "Right"
+  },
+  test_text_label: {
+    id: "Tulis Teks Pengujian di Sini:",
+    en: "Write Test Text Here:"
+  },
+  print_specimen_label: {
+    id: "Hasil Cetak Specimen:",
+    en: "Specimen Print Result:"
+  },
+  tool_move: { id: "Pindah", en: "Move" },
+  tool_move_hint: { id: "Pindahkan gambar di dalam kotak glyph", en: "Move drawing inside glyph box" },
+  tool_hand: { id: "Geser", en: "Pan" },
+  tool_hand_hint: { id: "Geser area kanvas", en: "Pan canvas area" },
+  tool_brush: { id: "Kuas", en: "Brush" },
+  tool_brush_hint: { id: "Gambar coretan bebas", en: "Draw freehand strokes" },
+  tool_pen: { id: "Pena", en: "Pen" },
+  tool_pen_hint: { id: "Klik atau seret untuk membuat titik kurva", en: "Click or drag to create curve points" },
+  tool_line: { id: "Garis", en: "Line" },
+  tool_line_hint: { id: "Tarik garis lurus dari satu titik ke titik lain", en: "Draw a straight line between two points" },
+  tool_rect: { id: "Kotak", en: "Rectangle" },
+  tool_rect_hint: { id: "Buat bentuk kotak persegi panjang", en: "Draw a rectangular shape" },
+  tool_ellipse: { id: "Elips", en: "Ellipse" },
+  tool_ellipse_hint: { id: "Buat bentuk lingkaran atau elips", en: "Draw a circular or elliptical shape" },
+  tool_eraser: { id: "Penghapus", en: "Eraser" },
+  tool_eraser_hint: { id: "Hapus titik-titik terdekat", en: "Erase nearby points" },
+  tool_fill: { id: "Isi", en: "Fill" },
+  tool_fill_hint: { id: "Warnai bentuk saat ini dengan warna hitam", en: "Fill current shape with solid color" }
 };
 
 interface I18nContextType {

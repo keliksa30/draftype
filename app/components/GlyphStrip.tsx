@@ -1,5 +1,6 @@
 import { RefObject } from "react";
 import { GlyphArt } from "./types";
+import { useI18n } from "../utils/i18n";
 
 interface GlyphStripProps {
   glyphs: readonly string[];
@@ -24,9 +25,11 @@ export default function GlyphStrip({
   setGlyphStripScroll,
   updateGlyphScroll,
 }: GlyphStripProps) {
+  const { t } = useI18n();
+
   return (
     <>
-      <div className="glyph-select-header">Select your glyphs here</div>
+      <div className="glyph-select-header">{t("glyph_select_header")}</div>
       <div className="glyph-carousel">
         <button
           className="glyph-arrow prev"

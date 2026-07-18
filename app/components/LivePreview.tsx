@@ -1,5 +1,6 @@
 import { GlyphArt } from "./types";
 import { cropSvgToAdvance } from "./constants";
+import { useI18n } from "../utils/i18n";
 
 interface LivePreviewProps {
   previewText: string;
@@ -11,10 +12,12 @@ interface LivePreviewProps {
 const GLYPH_H = 58;
 
 export default function LivePreview({ previewText, setPreviewText, glyphMap }: LivePreviewProps) {
+  const { t } = useI18n();
+
   return (
     <div className="live-card focus-live-card">
       <label>
-        Live preview
+        {t("live_preview")}
         <input
           value={previewText}
           onChange={(event) => setPreviewText(event.target.value)}

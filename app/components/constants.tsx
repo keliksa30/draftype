@@ -118,8 +118,8 @@ export const smoothPoints = (points: DrawPoint[], strength: number): DrawPoint[]
       const amount = Math.min(0.82, strength / 100);
       return {
         ...point,
-        x: Math.round(point.x * (1 - amount) + ((prev.x + next.x) / 2) * amount),
-        y: Math.round(point.y * (1 - amount) + ((prev.y + next.y) / 2) * amount),
+        x: Math.round((point.x * (1 - amount) + ((prev.x + next.x) / 2) * amount) * 100) / 100,
+        y: Math.round((point.y * (1 - amount) + ((prev.y + next.y) / 2) * amount) * 100) / 100,
       };
     });
   }

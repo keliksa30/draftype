@@ -941,8 +941,8 @@ export default function Home() {
       x = Math.round(x / gridSnapSize) * gridSnapSize;
       y = Math.round(y / gridSnapSize) * gridSnapSize;
     } else {
-      x = Math.round(x);
-      y = Math.round(y);
+      x = Math.round(x * 100) / 100;
+      y = Math.round(y * 100) / 100;
     }
 
     return {
@@ -1474,7 +1474,9 @@ export default function Home() {
   const startDrawing = (event: PointerEvent<SVGSVGElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = readPointer(event);
-    setPenPreviewPoint(point);
+    if (drawTool === "pen") {
+      setPenPreviewPoint(point);
+    }
 
     if (drawTool === "line" || drawTool === "rect" || drawTool === "ellipse") {
       setShapeStart(point);
@@ -1545,7 +1547,9 @@ export default function Home() {
 
   const continueDrawing = (event: PointerEvent<SVGSVGElement>) => {
     const point = readPointer(event);
-    setPenPreviewPoint(point);
+    if (drawTool === "pen") {
+      setPenPreviewPoint(point);
+    }
     if (!isDrawing) return;
 
     if (drawTool === "line" || drawTool === "rect" || drawTool === "ellipse") {

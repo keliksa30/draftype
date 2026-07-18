@@ -1,6 +1,7 @@
 import { PointerEvent, RefObject, useEffect } from "react";
 import { Mode, DrawTool, DrawPoint, GlyphArt, BrickGrid } from "./types";
 import { fingerTools, getToolIcon, getCalligraphyPath, getPointedPath } from "./constants";
+import { useI18n } from "../utils/i18n";
 
 interface DrawingCanvasProps {
   mode: Mode;
@@ -105,6 +106,8 @@ export default function DrawingCanvas({
   penType,
   penAngle,
 }: DrawingCanvasProps) {
+  const { t } = useI18n();
+
   useEffect(() => {
     const svg = drawingRef.current;
     if (!svg) return;
@@ -128,14 +131,14 @@ export default function DrawingCanvas({
     <>
       <div className="board-header">
         <div>
-          <p className="kicker" style={{ color: "var(--ink)" }}>Panduan Huruf Lengkap</p>
+          <p className="kicker" style={{ color: "var(--ink)" }}>{t("guidelines_header")}</p>
           <h2>{activeGlyph}</h2>
         </div>
         <div className="preview-word" aria-label="Font preview">
           {mode === "typeTapToe" ? "TypeTapToe" : mode === "fingertype" ? "FingerType" : mode === "brickType" ? "BrickType" : "Specimen"}
         </div>
       </div>
-
+ 
       <div className={`canvas-zone ${mode === "fingertype" ? "finger-zone" : "type-zone"}`}>
         {mode === "fingertype" ? (
           <div className="finger-tool-rail" aria-label="FingerType tools">
@@ -147,11 +150,11 @@ export default function DrawingCanvas({
                   setDrawTool(tool.id as DrawTool);
                   if (tool.id === "pen") setNextPenMove(drawPoints.length === 0);
                 }}
-                title={tool.hint}
-                aria-label={tool.label}
+                title={t(`tool_${tool.id}_hint`)}
+                aria-label={t(`tool_${tool.id}`)}
               >
                 <span aria-hidden="true">{getToolIcon(tool.id)}</span>
-                <em>{tool.label}</em>
+                <em>{t(`tool_${tool.id}`)}</em>
               </button>
             ))}
           </div>
