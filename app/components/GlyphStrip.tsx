@@ -12,7 +12,7 @@ interface GlyphStripProps {
   scrollGlyphStrip: (direction: -1 | 1) => void;
   setGlyphStripScroll: (val: number) => void;
   updateGlyphScroll: () => void;
-  onAddCustomGlyph: (input: string) => void;
+  onAddCustomGlyphClick: () => void;
 }
 
 export default function GlyphStrip({
@@ -25,7 +25,7 @@ export default function GlyphStrip({
   scrollGlyphStrip,
   setGlyphStripScroll,
   updateGlyphScroll,
-  onAddCustomGlyph,
+  onAddCustomGlyphClick,
 }: GlyphStripProps) {
   const { t } = useI18n();
 
@@ -103,12 +103,7 @@ export default function GlyphStrip({
             letterSpacing: "0.06em",
             textDecoration: "underline",
           }}
-          onClick={() => {
-            const input = prompt(t("custom_glyph_prompt"));
-            if (input !== null) {
-              onAddCustomGlyph(input);
-            }
-          }}
+          onClick={onAddCustomGlyphClick}
         >
           {t("custom_glyph_trigger")}
         </button>

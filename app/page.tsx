@@ -20,6 +20,7 @@ import LivePreview from "./components/LivePreview";
 import GlyphEditPanel from "./components/GlyphEditPanel";
 import ExportPanel from "./components/ExportPanel";
 import ConfirmModal from "./components/ConfirmModal";
+import CustomGlyphModal from "./components/CustomGlyphModal";
 import DarkModeToggle from "./components/DarkModeToggle";
 import HistoryPanel from "./components/HistoryPanel";
 import KerningPairsPanel from "./components/KerningPairsPanel";
@@ -55,6 +56,7 @@ function MainApp() {
     message: "",
     onConfirm: () => {},
   });
+  const [isCustomGlyphModalOpen, setIsCustomGlyphModalOpen] = useState(false);
   const [lastPlacedStrokes, setLastPlacedStrokes] = useState<DrawPoint[]>([]);
   const [previousGlyphSvg, setPreviousGlyphSvg] = useState<string>("");
   const [activeGlyph, setActiveGlyph] = useState("A");
@@ -2540,7 +2542,7 @@ function MainApp() {
             scrollGlyphStrip={scrollGlyphStrip}
             setGlyphStripScroll={setGlyphStripScroll}
             updateGlyphScroll={updateGlyphScroll}
-            onAddCustomGlyph={handleAddCustomGlyphs}
+            onAddCustomGlyphClick={() => setIsCustomGlyphModalOpen(true)}
           />
           <LivePreview
             previewText={previewText}
@@ -2635,6 +2637,12 @@ function MainApp() {
       </section>
 
       <ConfirmModal confirmModal={confirmModal} setConfirmModal={setConfirmModal} t={t} />
+      <CustomGlyphModal
+        isOpen={isCustomGlyphModalOpen}
+        onClose={() => setIsCustomGlyphModalOpen(false)}
+        onConfirm={handleAddCustomGlyphs}
+        t={t}
+      />
 
       {/* Backdrop for mobile drawer overlays */}
       {(isLeftDrawerOpen || isRightDrawerOpen) && (
