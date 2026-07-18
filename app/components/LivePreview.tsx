@@ -1,5 +1,5 @@
 import { GlyphArt } from "./types";
-import { cropSvgToAdvance, getGlyphBounds } from "./constants";
+import { computeGlyphAdvance, getGlyphBounds } from "./constants";
 import { useI18n } from "../utils/i18n";
 
 interface LivePreviewProps {
@@ -8,7 +8,7 @@ interface LivePreviewProps {
   glyphMap: Record<string, GlyphArt>;
 }
 
-// Height of the glyph container in px (used as the cap-height reference)
+// Height of the glyph container in px
 const GLYPH_H = 58;
 
 export default function LivePreview({ previewText, setPreviewText, glyphMap }: LivePreviewProps) {
@@ -37,11 +37,28 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
             );
           }
 
+          const { advanceWidth, xShift } = computeGlyphAdvance(art, "proportional");
+          const containerW = advanceWidth * (GLYPH_H / 1000);
+
           const bounds = getGlyphBounds(art.svg);
-          const kerningScale = GLYPH_H / (bounds.gridHeight || 16);
-          const kerningPx = (art.kerning ?? 0) * kerningScale;
-          const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 0.06);
-          const containerW = widthRatio * GLYPH_H;
+          const viewBox = art.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
+          const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
+          const [, , viewWidth = 100, viewHeight = 100] = viewParts;
+          const scale = ((art.scale ?? 100) / 100) * (700 / Math.max(viewWidth, viewHeight, 1));
+          
+          const centerX = viewWidth / 2;
+          const centerY = viewHeight / 2;
+
+          const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+          const innerContent = contentMatch ? contentMatch[1] : "";
+
+          // The SVG uses a 1000x1000 UPM viewBox.
+          // Inside it, we translate and scale the original SVG paths using the exact OTF/TTF mapping.
+          const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" style="width: 100%; height: 100%; display: block; overflow: visible;">
+            <g transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${60 + (art.y ?? 0) * 5}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
+              ${innerContent}
+            </g>
+          </svg>`;
 
           return (
             <span
@@ -49,15 +66,12 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
               key={`${letter}-${index}`}
               style={{
                 display: "inline-block",
-                width: `${Math.max(8, containerW + kerningPx)}px`,
+                width: `${Math.max(4, containerW)}px`,
                 height: `${GLYPH_H}px`,
                 flexShrink: 0,
-                transform: art.y || art.rotation
-                  ? `translateY(${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg)`
-                  : undefined,
-                transformOrigin: "center bottom",
+                position: "relative",
               }}
-              dangerouslySetInnerHTML={{ __html: croppedSvg }}
+              dangerouslySetInnerHTML={{ __html: previewSvg }}
             />
           );
         })}

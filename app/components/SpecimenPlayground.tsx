@@ -2,11 +2,12 @@
 
 import React, { useState } from "react";
 import { GlyphArt } from "./types";
-import { cropSvgToAdvance } from "./constants";
+import { computeGlyphAdvance, getGlyphBounds } from "./constants";
 import { useI18n } from "../utils/i18n";
 
 interface SpecimenPlaygroundProps {
   glyphMap: Record<string, GlyphArt>;
+  borderSpacing?: number; // unused but kept for interface match if any
   kerningPairs: Record<string, number>;
 }
 
@@ -48,29 +49,50 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
           const totalKern = individualKern + pairKern + letterSpacing;
 
           if (art?.svg) {
-            // Crop SVG to bounding box with standard 6% sidebearing (matching live preview)
-            const { svg: croppedSvg, widthRatio } = cropSvgToAdvance(art.svg, 0.06);
-            const glyphW = widthRatio * fontSize;
-            // Apply total kerning (individual + pair + letter spacing)
-            const totalKernPx = totalKern * (fontSize / 36);
+            const { advanceWidth, xShift } = computeGlyphAdvance(art, "proportional");
+            // Scale base advance width to target font size
+            const baseWidth = advanceWidth * (fontSize / 1000);
+            
+            // Scaled pair kerning & custom tracking (letter spacing)
+            const pairKernPx = pairKern * 8 * (fontSize / 1000);
+            const letterSpacingPx = letterSpacing * 8 * (fontSize / 1000);
+            const totalWidth = baseWidth + pairKernPx + letterSpacingPx;
+
+            const bounds = getGlyphBounds(art.svg);
+            const viewBox = art.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
+            const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
+            const [, , viewWidth = 100, viewHeight = 100] = viewParts;
+            const scale = ((art.scale ?? 100) / 100) * (700 / Math.max(viewWidth, viewHeight, 1));
+            
+            const centerX = viewWidth / 2;
+            const centerY = viewHeight / 2;
+
+            const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+            const innerContent = contentMatch ? contentMatch[1] : "";
+
+            const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" style="width: 100%; height: 100%; display: block; overflow: visible;">
+              <g transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${60 + (art.y ?? 0) * 5}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
+                ${innerContent}
+              </g>
+            </svg>`;
+
             return (
               <span
                 key={`letter-${letterIdx}`}
                 style={{
                   display: "inline-block",
-                  width: `${Math.max(4, glyphW + totalKernPx)}px`,
+                  width: `${Math.max(4, totalWidth)}px`,
                   height: `${fontSize}px`,
-                  transform: art.y || art.rotation
-                    ? `translateY(${art.y ?? 0}%) rotate(${art.rotation ?? 0}deg)`
-                    : undefined,
-                  transformOrigin: "center bottom",
+                  position: "relative",
                 }}
                 className="specimen-glyph"
-                dangerouslySetInnerHTML={{ __html: croppedSvg }}
+                dangerouslySetInnerHTML={{ __html: previewSvg }}
               />
             );
           } else {
             // Fallback for missing characters
+            const pairKernPx = pairKern * 8 * (fontSize / 1000);
+            const letterSpacingPx = letterSpacing * 8 * (fontSize / 1000);
             return (
               <span
                 key={`letter-${letterIdx}`}
@@ -79,7 +101,7 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
                   fontSize: `${fontSize}px`,
                   lineHeight: 1,
                   fontFamily: "monospace",
-                  marginRight: `${totalKern * (fontSize / 36)}px`,
+                  marginRight: `${Math.max(2, pairKernPx + letterSpacingPx)}px`,
                   color: "var(--ink)",
                   opacity: 0.4,
                 }}
