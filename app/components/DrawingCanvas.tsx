@@ -163,6 +163,7 @@ export default function DrawingCanvas({
         <div
           ref={canvasRef}
           className={`mega-canvas ${mode === "typeTapToe" ? "type-canvas" : ""} tool-${drawTool}`}
+          style={{ touchAction: drawTool === "hand" ? "auto" : "none" }}
         >
           <span className="stage-label">Glyph {activeGlyph}</span>
           {mode === "fingertype" ? (

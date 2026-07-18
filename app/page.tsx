@@ -289,6 +289,8 @@ function MainApp() {
   const glyphStripRef = useRef<HTMLDivElement | null>(null);
   const panStartRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const moveStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastErasePointRef = useRef<{ x: number; y: number } | null>(null);
+  const rAFRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (mode === "brickType" && selectedGlyph?.svg) {
@@ -1665,6 +1667,7 @@ function MainApp() {
   const startDrawing = (event: PointerEvent<SVGSVGElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = readPointer(event);
+    lastErasePointRef.current = null;
     if (drawTool === "pen") {
       setPenPreviewPoint(point);
     }
@@ -1738,73 +1741,93 @@ function MainApp() {
 
   const continueDrawing = (event: PointerEvent<SVGSVGElement>) => {
     const point = readPointer(event);
-    if (drawTool === "pen") {
-      setPenPreviewPoint(point);
-    }
-    if (!isDrawing) return;
+    const clientX = event.clientX;
+    const clientY = event.clientY;
 
-    if (drawTool === "line" || drawTool === "rect" || drawTool === "ellipse") {
-      setShapePreview(point);
-      return;
+    if (rAFRef.current !== null) {
+      cancelAnimationFrame(rAFRef.current);
     }
-    if (drawTool === "hand") {
-      const start = panStartRef.current;
-      const canvas = canvasRef.current;
-      if (start && canvas) {
-        canvas.scrollLeft = start.left - (event.clientX - start.x);
-        canvas.scrollTop = start.top - (event.clientY - start.y);
+
+    rAFRef.current = requestAnimationFrame(() => {
+      rAFRef.current = null;
+
+      if (drawTool === "pen") {
+        setPenPreviewPoint(point);
       }
-      return;
-    }
-    if (drawTool === "move") {
-      const start = moveStartRef.current;
-      if (start) {
-        const dx = point.x - start.x;
-        const dy = point.y - start.y;
-        if (dx || dy) {
-          shiftDrawing(dx, dy);
-          moveStartRef.current = point;
-        }
-      }
-      return;
-    }
-    if (drawTool === "eraser") {
-      eraseNear(point);
-      return;
-    }
-    if (drawTool === "pen") {
-      setDrawPoints((points) => {
-        const lastIndex = points.length - 1;
-        const last = points[lastIndex];
-        if (!last || last.move) return points;
-        if (Math.hypot(point.x - last.x, point.y - last.y) < 2) return points;
-        return points.map((item, index) =>
-          index === lastIndex ? { ...item, curve: true, cx: point.x, cy: point.y } : item,
-        );
-      });
-      return;
-    }
-    if (drawTool === "brush") {
-      const last = activeStrokePointsRef.current[activeStrokePointsRef.current.length - 1];
-      if (last && Math.hypot(point.x - last.x, point.y - last.y) < 0.3) {
+      if (!isDrawing) return;
+
+      if (drawTool === "line" || drawTool === "rect" || drawTool === "ellipse") {
+        setShapePreview(point);
         return;
       }
-      activeStrokePointsRef.current.push({ ...point, move: false });
-
-      const activePathEl = document.getElementById("active-stroke-path");
-      if (activePathEl) {
-        let d = "";
-        const smoothed = smoothPoints(activeStrokePointsRef.current, smoothness);
-        if (penType === "calligraphy") {
-          d = getCalligraphyPath(smoothed, brushSize, penAngle);
-        } else if (penType === "pointed") {
-          d = getPointedPath(smoothed, brushSize);
-        } else {
-          d = pathFromPoints(smoothed);
+      if (drawTool === "hand") {
+        const start = panStartRef.current;
+        const canvas = canvasRef.current;
+        if (start && canvas) {
+          canvas.scrollLeft = start.left - (clientX - start.x);
+          canvas.scrollTop = start.top - (clientY - start.y);
         }
-        activePathEl.setAttribute("d", d);
+        return;
       }
-    }
+      if (drawTool === "move") {
+        const start = moveStartRef.current;
+        if (start) {
+          const dx = point.x - start.x;
+          const dy = point.y - start.y;
+          const dist = Math.hypot(dx, dy);
+          const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone/i.test(navigator.userAgent);
+          if (dist > (isMobile ? 1.0 : 0.4)) {
+            shiftDrawing(dx, dy);
+            moveStartRef.current = point;
+          }
+        }
+        return;
+      }
+      if (drawTool === "eraser") {
+        const last = lastErasePointRef.current;
+        if (last && Math.hypot(point.x - last.x, point.y - last.y) < 1.0) {
+          return;
+        }
+        lastErasePointRef.current = point;
+        eraseNear(point);
+        return;
+      }
+      if (drawTool === "pen") {
+        setDrawPoints((points) => {
+          const lastIndex = points.length - 1;
+          const last = points[lastIndex];
+          if (!last || last.move) return points;
+          if (Math.hypot(point.x - last.x, point.y - last.y) < 2) return points;
+          return points.map((item, index) =>
+            index === lastIndex ? { ...item, curve: true, cx: point.x, cy: point.y } : item,
+          );
+        });
+        return;
+      }
+      if (drawTool === "brush") {
+        const last = activeStrokePointsRef.current[activeStrokePointsRef.current.length - 1];
+        const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone/i.test(navigator.userAgent);
+        const minDist = isMobile ? 1.2 : 0.4;
+        if (last && Math.hypot(point.x - last.x, point.y - last.y) < minDist) {
+          return;
+        }
+        activeStrokePointsRef.current.push({ ...point, move: false });
+
+        const activePathEl = document.getElementById("active-stroke-path");
+        if (activePathEl) {
+          let d = "";
+          const smoothed = smoothPoints(activeStrokePointsRef.current, smoothness);
+          if (penType === "calligraphy") {
+            d = getCalligraphyPath(smoothed, brushSize, penAngle);
+          } else if (penType === "pointed") {
+            d = getPointedPath(smoothed, brushSize);
+          } else {
+            d = pathFromPoints(smoothed);
+          }
+          activePathEl.setAttribute("d", d);
+        }
+      }
+    });
   };
 
   const finishDrawing = () => {

@@ -143,7 +143,7 @@ export default function TypeTapToePanel({
           {magicContent("removeBg", t("remove_bg"))}
         </button>
         <button
-          className="action-button teal"
+          className="action-button magic-button teal"
           onClick={removeWhites}
           title={t("remove_whites")}
         >
