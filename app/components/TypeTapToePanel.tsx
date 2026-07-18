@@ -17,6 +17,7 @@ interface TypeTapToePanelProps {
   magicLoading: MagicAction | null;
   runMagic: (action: MagicAction, task: () => void | Promise<void>) => Promise<void>;
   removeBackground: () => Promise<void>;
+  removeWhites: () => void;
   clearTypeUpload: () => void;
   autotraceImage: () => Promise<void>;
   undoWorkingChange: () => void;
@@ -48,6 +49,7 @@ export default function TypeTapToePanel({
   magicLoading,
   runMagic,
   removeBackground,
+  removeWhites,
   clearTypeUpload,
   autotraceImage,
   undoWorkingChange,
@@ -139,6 +141,13 @@ export default function TypeTapToePanel({
           title={t("remove_bg")}
         >
           {magicContent("removeBg", t("remove_bg"))}
+        </button>
+        <button
+          className="action-button teal"
+          onClick={removeWhites}
+          title={t("remove_whites")}
+        >
+          {t("remove_whites")}
         </button>
         <button
           className="action-button"

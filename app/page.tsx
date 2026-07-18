@@ -991,6 +991,51 @@ function MainApp() {
     setTraceStatus("Background removed & image re-traced successfully!");
   };
 
+  const removeWhites = () => {
+    const art = glyphMap[activeGlyph] ?? emptyGlyph();
+    if (!art.svg) return;
+
+    pushWorkHistory();
+
+    let cleaned = art.svg;
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(cleaned, "image/svg+xml");
+      const allElements = doc.querySelectorAll("rect, path, circle, ellipse, polygon, polyline, line, g");
+      
+      allElements.forEach((el) => {
+        const fill = el.getAttribute("fill")?.toLowerCase();
+        const stroke = el.getAttribute("stroke")?.toLowerCase();
+        const style = el.getAttribute("style")?.toLowerCase() || "";
+        
+        const isWhiteFill = fill === "white" || fill === "#ffffff" || fill === "#fff" || style.includes("fill:#ffffff") || style.includes("fill:white") || style.includes("fill:#fff");
+        const isWhiteStroke = stroke === "white" || stroke === "#ffffff" || stroke === "#fff" || style.includes("stroke:#ffffff") || style.includes("stroke:white") || style.includes("stroke:#fff");
+        
+        if (isWhiteFill || isWhiteStroke) {
+          el.remove();
+        }
+      });
+      
+      const serializer = new XMLSerializer();
+      cleaned = serializer.serializeToString(doc);
+    } catch (e) {
+      console.error("DOMParser clean failed, fallback to regex:", e);
+      cleaned = cleanPotraceSvg(cleaned);
+    }
+    
+    setWorkingSvg(cleaned);
+    setGlyphMap((current) =>
+      applyAutoKerning({
+        ...current,
+        [activeGlyph]: {
+          ...(current[activeGlyph] ?? emptyGlyph()),
+          svg: cleaned,
+        },
+      }),
+    );
+    setTraceStatus("Warna putih berhasil dihapus!");
+  };
+
   const autotraceImage = async () => {
     if (!uploadedImage) {
       setTraceStatus("Upload an image first");
@@ -2697,6 +2742,7 @@ function MainApp() {
               magicLoading={magicLoading}
               runMagic={runMagic}
               removeBackground={removeBackground}
+              removeWhites={removeWhites}
               clearTypeUpload={clearTypeUpload}
               autotraceImage={autotraceImage}
               undoWorkingChange={undoWorkingChange}

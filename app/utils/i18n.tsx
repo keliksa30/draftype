@@ -88,6 +88,10 @@ export const translations: TranslationDict = {
     id: "Hapus Background",
     en: "Remove BG"
   },
+  remove_whites: {
+    id: "Hapus Warna Putih",
+    en: "Remove Whites"
+  },
   clear_img: {
     id: "Hapus gambar",
     en: "Clear Image"
