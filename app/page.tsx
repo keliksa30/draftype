@@ -2292,10 +2292,14 @@ function MainApp() {
             }
             
             const endPt = filteredPts[nPts - 1];
-            const endNormal = normals[nPts - 1];
-            const endAngle = Math.atan2(-endNormal.y, -endNormal.x);
+            const prevPt = filteredPts[nPts - 2];
+            const endVx = endPt.x - prevPt.x;
+            const endVy = endPt.y - prevPt.y;
+            const endLen = Math.hypot(endVx, endVy) || 1;
+            const endAlpha = Math.atan2(endVy, endVx);
+            const endStartAngle = endAlpha - Math.PI / 2;
             for (let step = 1; step <= 4; step++) {
-              const a = endAngle + step * (Math.PI / 4);
+              const a = endStartAngle + step * (Math.PI / 4);
               path.lineTo(endPt.x + r * Math.cos(a), endPt.y + r * Math.sin(a));
             }
             
@@ -2304,10 +2308,14 @@ function MainApp() {
             }
             
             const startPt = filteredPts[0];
-            const startNormal = normals[0];
-            const startAngle = Math.atan2(startNormal.y, startNormal.x);
+            const nextPt = filteredPts[1];
+            const startVx = nextPt.x - startPt.x;
+            const startVy = nextPt.y - startPt.y;
+            const startLen = Math.hypot(startVx, startVy) || 1;
+            const startAlpha = Math.atan2(startVy, startVx);
+            const startStartAngle = startAlpha + Math.PI / 2;
             for (let step = 1; step <= 4; step++) {
-              const a = startAngle + step * (Math.PI / 4);
+              const a = startStartAngle + step * (Math.PI / 4);
               path.lineTo(startPt.x + r * Math.cos(a), startPt.y + r * Math.sin(a));
             }
           } else {
@@ -2317,10 +2325,14 @@ function MainApp() {
             }
             
             const endPt = filteredPts[nPts - 1];
-            const endNormal = normals[nPts - 1];
-            const endAngle = Math.atan2(endNormal.y, endNormal.x);
+            const prevPt = filteredPts[nPts - 2];
+            const endVx = endPt.x - prevPt.x;
+            const endVy = endPt.y - prevPt.y;
+            const endLen = Math.hypot(endVx, endVy) || 1;
+            const endAlpha = Math.atan2(endVy, endVx);
+            const endStartAngle = endAlpha + Math.PI / 2;
             for (let step = 1; step <= 4; step++) {
-              const a = endAngle + step * (Math.PI / 4);
+              const a = endStartAngle - step * (Math.PI / 4);
               path.lineTo(endPt.x + r * Math.cos(a), endPt.y + r * Math.sin(a));
             }
             
@@ -2329,10 +2341,14 @@ function MainApp() {
             }
             
             const startPt = filteredPts[0];
-            const startNormal = normals[0];
-            const startAngle = Math.atan2(-startNormal.y, -startNormal.x);
+            const nextPt = filteredPts[1];
+            const startVx = nextPt.x - startPt.x;
+            const startVy = nextPt.y - startPt.y;
+            const startLen = Math.hypot(startVx, startVy) || 1;
+            const startAlpha = Math.atan2(startVy, startVx);
+            const startStartAngle = startAlpha - Math.PI / 2;
             for (let step = 1; step <= 4; step++) {
-              const a = startAngle + step * (Math.PI / 4);
+              const a = startStartAngle - step * (Math.PI / 4);
               path.lineTo(startPt.x + r * Math.cos(a), startPt.y + r * Math.sin(a));
             }
           }
