@@ -46,9 +46,9 @@ import {
   getPointedPath,
 } from "./components/constants";
 import { saveDraftToDB, loadDraftFromDB, clearDraftFromDB } from "./utils/db";
-import { translations, Lang } from "./utils/i18n";
+import { translations, Lang, I18nProvider, useI18n } from "./utils/i18n";
 
-export default function Home() {
+function MainApp() {
   const [mode, setMode] = useState<Mode>("typeTapToe");
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
     isOpen: false,
@@ -152,25 +152,7 @@ export default function Home() {
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("draftype_lang") as Lang) ?? "id";
-    }
-    return "id";
-  });
-
-  const setLang = (newLang: Lang) => {
-    setLangState(newLang);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("draftype_lang", newLang);
-    }
-  };
-
-  const t = (key: string): string => {
-    const entry = translations[key];
-    if (!entry) return key;
-    return entry[lang] || key;
-  };
+  const { lang, setLang, t } = useI18n();
 
   const pushGlobalHistory = (
     description: string,
@@ -2689,5 +2671,13 @@ export default function Home() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <I18nProvider>
+      <MainApp />
+    </I18nProvider>
   );
 }
