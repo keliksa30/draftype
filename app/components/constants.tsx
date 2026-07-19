@@ -139,31 +139,56 @@ export const pathFromPoints = (points: DrawPoint[]): string =>
 
 export const pointsFromPath = (pathStr: string): DrawPoint[] => {
   const points: DrawPoint[] = [];
-  const regex = /([MQLCCSsTTtAAaZzHhVv])\s*([0-9e.-]+(?:\s*,?\s*[0-9e.-]+)*)?/g;
+  const tokenRegex = /([MQLCCSsTTtAAaZzHhVv])|(-?[0-9.]+(?:[eE][-+]?[0-9]+)?)/g;
+  const tokens: string[] = [];
   let match;
+  while ((match = tokenRegex.exec(pathStr)) !== null) {
+    tokens.push(match[0]);
+  }
+
   let currX = 0;
   let currY = 0;
   let startX = 0;
   let startY = 0;
+  let lastCmd = "";
 
-  while ((match = regex.exec(pathStr)) !== null) {
-    const cmd = match[1];
-    const argsStr = match[2] || "";
-    const args = argsStr.trim().split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+  let i = 0;
+  while (i < tokens.length) {
+    let cmd = tokens[i];
+    let args: number[] = [];
+    
+    if (/^[A-Za-z]$/.test(cmd)) {
+      lastCmd = cmd;
+      i++;
+      while (i < tokens.length && !/^[A-Za-z]$/.test(tokens[i])) {
+        args.push(Number(tokens[i]));
+        i++;
+      }
+    } else {
+      cmd = lastCmd;
+      if (!cmd) {
+        i++;
+        continue;
+      }
+      while (i < tokens.length && !/^[A-Za-z]$/.test(tokens[i])) {
+        args.push(Number(tokens[i]));
+        i++;
+      }
+    }
 
     if (cmd === 'M' || cmd === 'm') {
       const isRelative = cmd === 'm';
-      for (let i = 0; i < args.length; i += 2) {
-        if (i + 1 >= args.length) break;
-        let x = args[i];
-        let y = args[i+1];
+      for (let k = 0; k < args.length; k += 2) {
+        if (k + 1 >= args.length) break;
+        let x = args[k];
+        let y = args[k+1];
         if (isRelative) {
           x += currX;
           y += currY;
         }
         currX = x;
         currY = y;
-        if (i === 0) {
+        if (k === 0) {
           startX = x;
           startY = y;
           points.push({ x, y, move: true });
@@ -171,12 +196,14 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
           points.push({ x, y, move: false });
         }
       }
+      if (cmd === 'm') lastCmd = 'l';
+      else if (cmd === 'M') lastCmd = 'L';
     } else if (cmd === 'L' || cmd === 'l') {
       const isRelative = cmd === 'l';
-      for (let i = 0; i < args.length; i += 2) {
-        if (i + 1 >= args.length) break;
-        let x = args[i];
-        let y = args[i+1];
+      for (let k = 0; k < args.length; k += 2) {
+        if (k + 1 >= args.length) break;
+        let x = args[k];
+        let y = args[k+1];
         if (isRelative) {
           x += currX;
           y += currY;
@@ -187,28 +214,28 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
       }
     } else if (cmd === 'H' || cmd === 'h') {
       const isRelative = cmd === 'h';
-      for (let i = 0; i < args.length; i++) {
-        let x = args[i];
+      for (let k = 0; k < args.length; k++) {
+        let x = args[k];
         if (isRelative) x += currX;
         currX = x;
         points.push({ x, y: currY, move: false });
       }
     } else if (cmd === 'V' || cmd === 'v') {
       const isRelative = cmd === 'v';
-      for (let i = 0; i < args.length; i++) {
-        let y = args[i];
+      for (let k = 0; k < args.length; k++) {
+        let y = args[k];
         if (isRelative) y += currY;
         currY = y;
         points.push({ x: currX, y, move: false });
       }
     } else if (cmd === 'Q' || cmd === 'q') {
       const isRelative = cmd === 'q';
-      for (let i = 0; i < args.length; i += 4) {
-        if (i + 3 >= args.length) break;
-        let cx = args[i];
-        let cy = args[i+1];
-        let x = args[i+2];
-        let y = args[i+3];
+      for (let k = 0; k < args.length; k += 4) {
+        if (k + 3 >= args.length) break;
+        let cx = args[k];
+        let cy = args[k+1];
+        let x = args[k+2];
+        let y = args[k+3];
         if (isRelative) {
           cx += currX;
           cy += currY;
@@ -221,12 +248,12 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
       }
     } else if (cmd === 'C' || cmd === 'c') {
       const isRelative = cmd === 'c';
-      for (let i = 0; i < args.length; i += 6) {
-        if (i + 5 >= args.length) break;
-        let cx = args[i+2];
-        let cy = args[i+3];
-        let x = args[i+4];
-        let y = args[i+5];
+      for (let k = 0; k < args.length; k += 6) {
+        if (k + 5 >= args.length) break;
+        let cx = args[k+2];
+        let cy = args[k+3];
+        let x = args[k+4];
+        let y = args[k+5];
         if (isRelative) {
           cx += currX;
           cy += currY;
@@ -239,12 +266,12 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
       }
     } else if (cmd === 'S' || cmd === 's') {
       const isRelative = cmd === 's';
-      for (let i = 0; i < args.length; i += 4) {
-        if (i + 3 >= args.length) break;
-        let cx = args[i];
-        let cy = args[i+1];
-        let x = args[i+2];
-        let y = args[i+3];
+      for (let k = 0; k < args.length; k += 4) {
+        if (k + 3 >= args.length) break;
+        let cx = args[k];
+        let cy = args[k+1];
+        let x = args[k+2];
+        let y = args[k+3];
         if (isRelative) {
           cx += currX;
           cy += currY;
@@ -257,10 +284,10 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
       }
     } else if (cmd === 'T' || cmd === 't') {
       const isRelative = cmd === 't';
-      for (let i = 0; i < args.length; i += 2) {
-        if (i + 1 >= args.length) break;
-        let x = args[i];
-        let y = args[i+1];
+      for (let k = 0; k < args.length; k += 2) {
+        if (k + 1 >= args.length) break;
+        let x = args[k];
+        let y = args[k+1];
         if (isRelative) {
           x += currX;
           y += currY;
@@ -271,10 +298,10 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
       }
     } else if (cmd === 'A' || cmd === 'a') {
       const isRelative = cmd === 'a';
-      for (let i = 0; i < args.length; i += 7) {
-        if (i + 6 >= args.length) break;
-        let x = args[i+5];
-        let y = args[i+6];
+      for (let k = 0; k < args.length; k += 7) {
+        if (k + 6 >= args.length) break;
+        let x = args[k+5];
+        let y = args[k+6];
         if (isRelative) {
           x += currX;
           y += currY;
