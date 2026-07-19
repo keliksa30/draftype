@@ -5,7 +5,6 @@
 </p>
 
 <p align="center">
-  <b>Bikin Font Ga Pernah Semudah Ini!</b><br/>
   <i>Making custom fonts has never been this easy.</i>
 </p>
 
