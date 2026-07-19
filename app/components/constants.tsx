@@ -65,7 +65,7 @@ export const fingerTools: FingerTool[] = [
 export const emptyGlyph = (): GlyphArt => ({
   svg: "",
   rotation: 0,
-  scale: 82,
+  scale: 120,
   x: 0,
   y: 0,
   kerning: 0,
@@ -557,29 +557,29 @@ const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
   const isFlat = "acemnorsuvwxz".includes(glyph);
   const isSlim = "ilI1!|.:;()[]{}".includes(glyph);
   const isWide = "MW@#%&".includes(glyph);
-  let scale = 82;
+  let scale = 120;
   let x = 0;
   let y = 0;
   if (isUpper || isDigit) {
-    scale = isSlim ? 78 : isWide ? 88 : 84;
+    scale = isSlim ? 116 : isWide ? 130 : 124;
     x = isSlim ? -3 : isWide ? 1 : 0;
     y = 0;
   } else if (isLower) {
     if (isAscender) {
-      scale = isSlim ? 78 : 82;
+      scale = isSlim ? 116 : 122;
       x = isSlim ? -3 : 0;
       y = 1;
     } else if (isDescender) {
-      scale = 76;
+      scale = 114;
       x = glyph === "j" ? -4 : 0;
       y = 9;
     } else if (isFlat) {
-      scale = 68;
+      scale = 105;
       x = 0;
       y = 7;
     }
   } else {
-    scale = isSlim ? 74 : 80;
+    scale = isSlim ? 110 : 118;
     x = isSlim ? -2 : 0;
     y = 0;
   }

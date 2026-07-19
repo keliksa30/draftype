@@ -16,6 +16,8 @@ interface BrickTypePanelProps {
   undoBrick: () => void;
   redoBrick: () => void;
   t: (key: string) => string;
+  templateStyle: "none" | "sans" | "serif" | "cursive";
+  setTemplateStyle: (val: "none" | "sans" | "serif" | "cursive") => void;
 }
 
 export default function BrickTypePanel({
@@ -35,6 +37,8 @@ export default function BrickTypePanel({
   undoBrick,
   redoBrick,
   t,
+  templateStyle,
+  setTemplateStyle,
 }: BrickTypePanelProps) {
   const activeSize = getActiveBrickGrid().size;
 
@@ -136,6 +140,22 @@ export default function BrickTypePanel({
         >
           {showOnionSkin ? "Onion On" : "Onion Off"}
         </button>
+      </div>
+      {/* Template Guide Selection */}
+      <div style={{ border: "2px solid var(--line)", padding: "12px", borderRadius: "8px", background: "var(--white)", boxShadow: "3px 3px 0 var(--line)" }}>
+        <p style={{ margin: "0 0 10px", fontSize: "0.75rem", fontWeight: "900", color: "var(--yellow)", letterSpacing: "0.05em" }}>TEMPLATE GUIDE</p>
+        <div style={{ display: "flex", gap: "6px" }}>
+          {(["none", "sans", "serif", "cursive"] as const).map((style) => (
+            <button
+              key={style}
+              onClick={() => setTemplateStyle(style)}
+              className={`action-button ${templateStyle === style ? "active yellow" : ""}`}
+              style={{ flex: 1, minHeight: "32px", fontSize: "0.7rem", padding: "4px 2px", fontWeight: "900", textTransform: "uppercase" }}
+            >
+              {style === "none" ? "Off" : style}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

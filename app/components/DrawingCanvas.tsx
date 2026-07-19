@@ -219,7 +219,7 @@ export default function DrawingCanvas({
                       ? "cursive"
                       : "monospace"
                   }
-                  fontSize="70"
+                  fontSize="80"
                   fontWeight="bold"
                   fill="var(--line)"
                   opacity="0.12"
@@ -580,6 +580,42 @@ export default function DrawingCanvas({
                     }}
                   />
                 </div>
+              )}
+              {templateStyle !== "none" && (
+                <svg
+                  viewBox="0 0 100 100"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                    zIndex: 5,
+                  }}
+                >
+                  <text
+                    x="50"
+                    y="74"
+                    textAnchor="middle"
+                    fontFamily={
+                      templateStyle === "sans"
+                        ? "sans-serif"
+                        : templateStyle === "serif"
+                        ? "serif"
+                        : templateStyle === "cursive"
+                        ? "cursive"
+                        : "monospace"
+                    }
+                    fontSize="80"
+                    fontWeight="bold"
+                    fill="var(--line)"
+                    opacity="0.12"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {activeGlyph}
+                  </text>
+                </svg>
               )}
             </div>
           ) : hasTypeDraft || !selectedGlyph.svg ? (

@@ -2898,6 +2898,8 @@ function MainApp() {
               undoBrick={undoBrick}
               redoBrick={redoBrick}
               t={t}
+              templateStyle={templateStyle}
+              setTemplateStyle={setTemplateStyle}
             />
           )}
           <DarkModeToggle />
