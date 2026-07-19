@@ -326,10 +326,69 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
   const gridWidth = vbMatch ? parseFloat(vbMatch[1]) : 16;
   const gridHeight = vbMatch ? parseFloat(vbMatch[2]) : 16;
 
+  // 1. Client-side browser calculation using native getBBox() for 100% accuracy
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    try {
+      const container = document.createElement("div");
+      container.style.position = "absolute";
+      container.style.visibility = "hidden";
+      container.style.width = "0";
+      container.style.height = "0";
+      container.style.overflow = "hidden";
+      container.innerHTML = svgString.trim();
+      
+      const svgEl = container.querySelector("svg");
+      if (svgEl) {
+        document.body.appendChild(container);
+        
+        const elements = svgEl.querySelectorAll("rect, path, ellipse, circle, polygon, polyline");
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let hasContent = false;
+        
+        elements.forEach((el) => {
+          const fill = el.getAttribute("fill")?.toLowerCase();
+          const stroke = el.getAttribute("stroke")?.toLowerCase();
+          const style = el.getAttribute("style")?.toLowerCase() || "";
+          
+          // Skip white/transparent elements
+          const isWhite = fill === "#ffffff" || fill === "white" || fill === "#fff" || fill === "#ffffff" ||
+                          stroke === "#ffffff" || stroke === "white" || stroke === "#fff" ||
+                          style.includes("fill:#ffffff") || style.includes("fill:white") ||
+                          style.includes("stroke:#ffffff") || style.includes("stroke:white");
+                          
+          const isTransparent = fill === "none" && (stroke === "none" || !stroke);
+          
+          if (!isWhite && !isTransparent && typeof (el as any).getBBox === "function") {
+            const bbox = (el as any).getBBox();
+            if (bbox.width > 0 || bbox.height > 0) {
+              const strokeWidthAttr = el.getAttribute("stroke-width");
+              const strokeWidth = strokeWidthAttr ? parseFloat(strokeWidthAttr) : 0;
+              const halfStroke = strokeWidth / 2;
+              
+              minX = Math.min(minX, bbox.x - halfStroke);
+              maxX = Math.max(maxX, bbox.x + bbox.width + halfStroke);
+              hasContent = true;
+            }
+          }
+        });
+        
+        document.body.removeChild(container);
+        
+        if (hasContent) {
+          return { minX, maxX, gridWidth, gridHeight, isEmpty: false };
+        }
+      }
+    } catch (e) {
+      console.error("Browser getBBox failed, falling back to regex parser:", e);
+    }
+  }
+
+  // 2. SSR Fallback (Regex-based parser)
   let minX = Infinity;
   let maxX = -Infinity;
 
-  // 1. Process rect-based glyphs (for pixel bricks)
+  // Process rect-based glyphs (for pixel bricks)
   for (const m of svgString.matchAll(/<rect[^>]*?>/g)) {
     const rectStr = m[0];
     const xm = rectStr.match(/\bx=["'](-?[\d.]+)["']/);
@@ -342,7 +401,7 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
     }
   }
 
-  // 2. Process path-based glyphs (for freehand/handwriting curves)
+  // Process path-based glyphs (for freehand/handwriting curves)
   const pathPattern = /<path[^>]*d=["']([^"']+)["'][^>]*>/gi;
   for (const match of svgString.matchAll(pathPattern)) {
     const pathTag = match[0];
