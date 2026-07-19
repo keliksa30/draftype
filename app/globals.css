@@ -1653,7 +1653,7 @@ html.dark .sidebar-tab:hover {
 
 .brick-cell {
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: var(--white);
+  background: transparent;
   cursor: crosshair;
   transition: background-color 0.05s ease;
 }

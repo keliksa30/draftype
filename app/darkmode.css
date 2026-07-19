@@ -213,7 +213,7 @@ html.dark .draw-bg {
 }
 
 html.dark .brick-cell {
-  background: var(--white);
+  background: transparent;
   border-color: rgba(203, 213, 225, 0.06);
 }
 

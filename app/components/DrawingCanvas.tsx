@@ -465,8 +465,8 @@ export default function DrawingCanvas({
                 setLastToggledCell(null);
               }}
             >
-              {/* Template Watermark behind everything */}
-              {templateStyle !== "none" && (
+              {/* Template Watermark, reference image, and finger image behind everything */}
+              {(templateStyle !== "none" || referenceImage || fingerImage) && (
                 <svg
                   viewBox="0 0 100 100"
                   style={{
@@ -479,27 +479,51 @@ export default function DrawingCanvas({
                     zIndex: 1,
                   }}
                 >
-                  <text
-                    x="50"
-                    y="74"
-                    textAnchor="middle"
-                    fontFamily={
-                      templateStyle === "sans"
-                        ? "sans-serif"
-                        : templateStyle === "serif"
-                        ? "serif"
-                        : templateStyle === "cursive"
-                        ? "cursive"
-                        : "monospace"
-                    }
-                    fontSize="80"
-                    fontWeight="bold"
-                    fill="var(--ink)"
-                    opacity="0.12"
-                    style={{ pointerEvents: "none", userSelect: "none" }}
-                  >
-                    {activeGlyph}
-                  </text>
+                  {referenceImage ? (
+                    <image
+                      href={referenceImage}
+                      x="0"
+                      y="0"
+                      width="100"
+                      height="100"
+                      opacity={referenceOpacity / 100}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  ) : null}
+                  {fingerImage ? (
+                    <image
+                      href={fingerImage}
+                      x="0"
+                      y="0"
+                      width="100"
+                      height="100"
+                      className="finger-image-layer"
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  ) : null}
+                  {templateStyle !== "none" && (
+                    <text
+                      x="50"
+                      y="74"
+                      textAnchor="middle"
+                      fontFamily={
+                        templateStyle === "sans"
+                          ? "sans-serif"
+                          : templateStyle === "serif"
+                          ? "serif"
+                          : templateStyle === "cursive"
+                          ? "cursive"
+                          : "monospace"
+                      }
+                      fontSize="80"
+                      fontWeight="bold"
+                      fill="var(--ink)"
+                      opacity="0.12"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {activeGlyph}
+                    </text>
+                  )}
                 </svg>
               )}
 
