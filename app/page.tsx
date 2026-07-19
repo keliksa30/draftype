@@ -2116,6 +2116,10 @@ function MainApp() {
     setGlyphMap(nextGlyphMap);
     pushGlobalHistory(`Menggambar ${activeGlyph}`, nextGlyphMap);
 
+    setDrawPoints([]);
+    setDrawingFilled(false);
+    setDrawHistory([]);
+    setDrawHistoryIndex(-1);
     setIsDrawingModified(false);
   };
 
