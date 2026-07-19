@@ -133,6 +133,10 @@ function MainApp() {
     return "";
   });
   const [fontStyle, setFontStyle] = useState("Regular");
+
+  // Template Guide and Onboarding states
+  const [templateStyle, setTemplateStyle] = useState<"none" | "sans" | "serif" | "cursive">("none");
+  const [onboardingStep, setOnboardingStep] = useState<null | number>(null);
   const [fontVersion, setFontVersion] = useState("1.0.0");
   const [fontLicense, setFontLicense] = useState("SIL Open Font License");
 
@@ -307,6 +311,68 @@ function MainApp() {
       }
     }
   }, [mode, activeGlyph, selectedGlyph?.svg]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initial Onboarding check
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const onboarded = localStorage.getItem("draftype_onboarded");
+      if (!onboarded) {
+        setOnboardingStep(0);
+      }
+    }
+  }, []);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea") return;
+
+      const key = event.key.toLowerCase();
+      const isCmdOrCtrl = event.metaKey || event.ctrlKey;
+
+      // Undo / Redo
+      if (isCmdOrCtrl && key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (mode === "fingertype") redoDrawing();
+          else if (mode === "brickType") redoBrick();
+        } else {
+          if (mode === "fingertype") undoDrawing();
+          else if (mode === "brickType") undoBrick();
+          else if (mode === "typeTapToe") undoWorkingChange();
+        }
+        return;
+      }
+      if (isCmdOrCtrl && key === "y") {
+        event.preventDefault();
+        if (mode === "fingertype") redoDrawing();
+        else if (mode === "brickType") redoBrick();
+        return;
+      }
+
+      // Drawing Tool Selection
+      if (mode === "fingertype") {
+        if (key === "b") { event.preventDefault(); setDrawTool("brush"); }
+        else if (key === "p") { event.preventDefault(); setDrawTool("pen"); }
+        else if (key === "e") { event.preventDefault(); setDrawTool("eraser"); }
+        else if (key === "v") { event.preventDefault(); setDrawTool("move"); }
+        else if (key === "h") { event.preventDefault(); setDrawTool("hand"); }
+        else if (key === "l") { event.preventDefault(); setDrawTool("line"); }
+        else if (key === "r") { event.preventDefault(); setDrawTool("rect"); }
+        else if (key === "c") { event.preventDefault(); setDrawTool("ellipse"); }
+        else if (key === "f") { event.preventDefault(); setDrawTool("fill"); }
+      } else if (mode === "brickType") {
+        if (key === "e") { event.preventDefault(); setBrickTool("eraser"); }
+        else if (key === "b" || key === "p") { event.preventDefault(); setBrickTool("pencil"); }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mode, undoDrawing, redoDrawing, undoBrick, redoBrick, undoWorkingChange]);
 
 
 
@@ -2741,11 +2807,13 @@ function MainApp() {
             onClearAll={handleClearAll}
             t={t}
           />
-          <ModeSelector
-            mode={mode}
-            switchMode={switchMode}
-            t={t}
-          />
+          <div className={onboardingStep === 1 ? "onboard-highlight" : ""} style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+            <ModeSelector
+              mode={mode}
+              switchMode={switchMode}
+              t={t}
+            />
+          </div>
           <GuideCard mode={mode} uploadedImage={uploadedImage} t={t} />
 
           {mode === "typeTapToe" ? (
@@ -2810,6 +2878,8 @@ function MainApp() {
               penAngle={penAngle}
               setPenAngle={setPenAngle}
               t={t}
+              templateStyle={templateStyle}
+              setTemplateStyle={setTemplateStyle}
             />
           ) : (
             <BrickTypePanel
@@ -2833,7 +2903,7 @@ function MainApp() {
           <DarkModeToggle />
         </aside>
 
-        <section className="glyph-board focus-board" aria-label="Glyph design canvas">
+        <section className={`glyph-board focus-board ${onboardingStep === 2 ? "onboard-highlight" : ""}`} aria-label="Glyph design canvas">
           {mode === "specimen" ? (
             <SpecimenPlayground
               glyphMap={glyphMap}
@@ -2889,22 +2959,25 @@ function MainApp() {
                 gridSnapSize={gridSnapSize}
                 penType={penType}
                 penAngle={penAngle}
+                templateStyle={templateStyle}
               />
-              <CanvasControls
-                mode={mode}
-                activeGlyph={activeGlyph}
-                fingerZoom={fingerZoom}
-                setFingerZoom={setFingerZoom}
-                typeZoom={typeZoom}
-                setTypeZoom={setTypeZoom}
-                canGlobalRevert={canGlobalRevert}
-                handleClearCanvas={handleClearCanvas}
-                handleGlobalRevert={handleGlobalRevert}
-                assignWorkingSvg={assignWorkingSvg}
-                commitBrickToGlyph={commitBrickToGlyph}
-                convertDrawingToGlyph={convertDrawingToGlyph}
-                t={t}
-              />
+              <div className={onboardingStep === 3 ? "onboard-highlight" : ""} style={{ width: "100%", display: "flex", flexDirection: "column" }}>
+                <CanvasControls
+                  mode={mode}
+                  activeGlyph={activeGlyph}
+                  fingerZoom={fingerZoom}
+                  setFingerZoom={setFingerZoom}
+                  typeZoom={typeZoom}
+                  setTypeZoom={setTypeZoom}
+                  canGlobalRevert={canGlobalRevert}
+                  handleClearCanvas={handleClearCanvas}
+                  handleGlobalRevert={handleGlobalRevert}
+                  assignWorkingSvg={assignWorkingSvg}
+                  commitBrickToGlyph={commitBrickToGlyph}
+                  convertDrawingToGlyph={convertDrawingToGlyph}
+                  t={t}
+                />
+              </div>
             </>
           )}
           <GlyphStrip
@@ -2919,11 +2992,13 @@ function MainApp() {
             updateGlyphScroll={updateGlyphScroll}
             onAddCustomGlyphClick={() => setIsCustomGlyphModalOpen(true)}
           />
-          <LivePreview
-            previewText={previewText}
-            setPreviewText={setPreviewText}
-            glyphMap={glyphMap}
-          />
+          <div className={onboardingStep === 4 ? "onboard-highlight" : ""} style={{ width: "100%" }}>
+            <LivePreview
+              previewText={previewText}
+              setPreviewText={setPreviewText}
+              glyphMap={glyphMap}
+            />
+          </div>
         </section>
 
         <aside className={`edit-panel ${isRightDrawerOpen ? "open" : ""}`}>
@@ -3053,6 +3128,97 @@ function MainApp() {
           {t("fab_settings")}
         </button>
       </div>
+
+      {/* Onboarding Assistant Card */}
+      {onboardingStep !== null && onboardingStep >= 0 && (
+        <div className="onboard-card" role="dialog" aria-modal="true">
+          <div className="onboard-header">
+            <span style={{ fontSize: "1.2rem" }}>🤖</span>
+            <span>DrafBot — Asisten Font-mu</span>
+          </div>
+          <div className="onboard-content">
+            {onboardingStep === 0 && (
+              <>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Selamat Datang di DrafType! 🎉</p>
+                <p>Aku adalah asisten desain font-mu. Mari ikuti tur 1 menit untuk memahami cara merancang dan membuat font kustom pertamamu secara mudah!</p>
+              </>
+            )}
+            {onboardingStep === 1 && (
+              <>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 1: Pilih Mode Kreatif 🎨</p>
+                <p>Gunakan tombol ini untuk memilih mode gambar. Kamu bisa melakukan **tracing gambar/SVG** (TypeTapToe), **menggambar bebas** (FingerType), atau membuat **pixel-art 8-bit** (BrickType).</p>
+              </>
+            )}
+            {onboardingStep === 2 && (
+              <>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 2: Kanvas Gambar ✍️</p>
+                <p>Ini adalah kanvas utamamu. Di sini kamu bisa menggambar bentuk huruf aktifmu menggunakan kuas, pena garis, penghapus, atau template jiplakan.</p>
+              </>
+            )}
+            {onboardingStep === 3 && (
+              <>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 3: Simpan Hasil Gambar 💾</p>
+                <p>Setelah selesai menggambar di kanvas, klik tombol <b>"Simpan" (Place in...)</b> ini agar karakter tersebut tersimpan ke dalam koleksi huruf font-mu.</p>
+              </>
+            )}
+            {onboardingStep === 4 && (
+              <>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 4: Pratinjau & Ekspor 🚀</p>
+                <p>Ketik kalimat kustom di area pratinjau ini untuk mencoba font-mu secara real-time! Jika semuanya sudah siap, klik tombol <b>Export</b> di panel samping untuk mengunduh file font .OTF/.TTF-mu.</p>
+              </>
+            )}
+          </div>
+          <div className="onboard-footer">
+            <div className="onboard-dots">
+              {[0, 1, 2, 3, 4].map((step) => (
+                <div key={step} className={`onboard-dot ${onboardingStep === step ? "active" : ""}`} />
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {onboardingStep > 0 ? (
+                <button
+                  className="action-button"
+                  style={{ minHeight: "30px", fontSize: "0.75rem", padding: "0 10px", border: "2px solid var(--line)", borderRadius: "6px", boxShadow: "2px 2px 0 var(--line)" }}
+                  onClick={() => setOnboardingStep((prev) => (prev !== null ? prev - 1 : null))}
+                >
+                  Kembali
+                </button>
+              ) : (
+                <button
+                  className="action-button"
+                  style={{ minHeight: "30px", fontSize: "0.75rem", padding: "0 10px", border: "2px solid var(--line)", borderRadius: "6px", boxShadow: "2px 2px 0 var(--line)" }}
+                  onClick={() => {
+                    setOnboardingStep(null);
+                    localStorage.setItem("draftype_onboarded", "true");
+                  }}
+                >
+                  Lewati
+                </button>
+              )}
+              {onboardingStep < 4 ? (
+                <button
+                  className="action-button yellow"
+                  style={{ minHeight: "30px", fontSize: "0.75rem", padding: "0 10px", border: "2px solid var(--line)", borderRadius: "6px", boxShadow: "2px 2px 0 var(--line)" }}
+                  onClick={() => setOnboardingStep((prev) => (prev !== null ? prev + 1 : null))}
+                >
+                  Lanjut
+                </button>
+              ) : (
+                <button
+                  className="action-button yellow"
+                  style={{ minHeight: "30px", fontSize: "0.75rem", padding: "0 10px", border: "2px solid var(--line)", borderRadius: "6px", boxShadow: "2px 2px 0 var(--line)" }}
+                  onClick={() => {
+                    setOnboardingStep(null);
+                    localStorage.setItem("draftype_onboarded", "true");
+                  }}
+                >
+                  Selesai
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

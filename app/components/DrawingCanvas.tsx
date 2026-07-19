@@ -53,6 +53,7 @@ interface DrawingCanvasProps {
   gridSnapSize: number;
   penType: "round" | "calligraphy" | "pointed";
   penAngle: number;
+  templateStyle?: "none" | "sans" | "serif" | "cursive";
 }
 
 export default function DrawingCanvas({
@@ -105,6 +106,7 @@ export default function DrawingCanvas({
   gridSnapSize,
   penType,
   penAngle,
+  templateStyle = "none",
 }: DrawingCanvasProps) {
   const { t } = useI18n();
 
@@ -202,6 +204,29 @@ export default function DrawingCanvas({
               <rect className="draw-bg" width="100" height="100" />
               {snapToGrid && (
                 <rect width="100" height="100" fill="url(#grid-snap-pattern)" style={{ pointerEvents: "none" }} />
+              )}
+              {templateStyle !== "none" && (
+                <text
+                  x="50"
+                  y="74"
+                  textAnchor="middle"
+                  fontFamily={
+                    templateStyle === "sans"
+                      ? "sans-serif"
+                      : templateStyle === "serif"
+                      ? "serif"
+                      : templateStyle === "cursive"
+                      ? "cursive"
+                      : "monospace"
+                  }
+                  fontSize="70"
+                  fontWeight="bold"
+                  fill="var(--line)"
+                  opacity="0.12"
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  {activeGlyph}
+                </text>
               )}
               {showOnionSkin && prevGlyphSvg ? (
                 <g
