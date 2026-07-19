@@ -428,8 +428,8 @@ function MainApp() {
 
   const clearTypeUpload = () => {
     pushWorkHistory();
-    if (referenceImage === uploadedImage) setReferenceImage("");
-    if (fingerImage === uploadedImage) setFingerImage("");
+    setReferenceImage("");
+    setFingerImage("");
     setUploadedImage("");
     setWorkingSvg(samplePixelGlyph);
     setFileName("no image selected");
@@ -2929,7 +2929,10 @@ function MainApp() {
             />
           ) : mode === "fingertype" ? (
             <FingerTypePanel
-              setReferenceImage={setReferenceImage}
+              setReferenceImage={(val) => {
+                setReferenceImage(val);
+                if (val === "") setFingerImage("");
+              }}
               brushSize={brushSize}
               setBrushSize={setBrushSize}
               smoothness={smoothness}
