@@ -3136,37 +3136,37 @@ function MainApp() {
         <div className="onboard-card" role="dialog" aria-modal="true">
           <div className="onboard-header">
             <span style={{ fontSize: "1.2rem" }}>🤖</span>
-            <span>DrafBot — Asisten Font-mu</span>
+            <span>{t("onboard_title")}</span>
           </div>
           <div className="onboard-content">
             {onboardingStep === 0 && (
               <>
-                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Selamat Datang di DrafType! 🎉</p>
-                <p>Aku adalah asisten desain font-mu. Mari ikuti tur 1 menit untuk memahami cara merancang dan membuat font kustom pertamamu secara mudah!</p>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>{t("onboard_step0_title")}</p>
+                <p>{t("onboard_step0_desc")}</p>
               </>
             )}
             {onboardingStep === 1 && (
               <>
-                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 1: Pilih Mode Kreatif 🎨</p>
-                <p>Gunakan tombol ini untuk memilih mode gambar. Kamu bisa melakukan **tracing gambar/SVG** (TypeTapToe), **menggambar bebas** (FingerType), atau membuat **pixel-art 8-bit** (BrickType).</p>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>{t("onboard_step1_title")}</p>
+                <p>{t("onboard_step1_desc")}</p>
               </>
             )}
             {onboardingStep === 2 && (
               <>
-                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 2: Kanvas Gambar ✍️</p>
-                <p>Ini adalah kanvas utamamu. Di sini kamu bisa menggambar bentuk huruf aktifmu menggunakan kuas, pena garis, penghapus, atau template jiplakan.</p>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>{t("onboard_step2_title")}</p>
+                <p>{t("onboard_step2_desc")}</p>
               </>
             )}
             {onboardingStep === 3 && (
               <>
-                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 3: Simpan Hasil Gambar 💾</p>
-                <p>Setelah selesai menggambar di kanvas, klik tombol <b>"Simpan" (Place in...)</b> ini agar karakter tersebut tersimpan ke dalam koleksi huruf font-mu.</p>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>{t("onboard_step3_title")}</p>
+                <p>{t("onboard_step3_desc")}</p>
               </>
             )}
             {onboardingStep === 4 && (
               <>
-                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>Langkah 4: Pratinjau & Ekspor 🚀</p>
-                <p>Ketik kalimat kustom di area pratinjau ini untuk mencoba font-mu secara real-time! Jika semuanya sudah siap, klik tombol <b>Export</b> di panel samping untuk mengunduh file font .OTF/.TTF-mu.</p>
+                <p style={{ fontWeight: "bold", marginBottom: "8px", fontSize: "0.9rem" }}>{t("onboard_step4_title")}</p>
+                <p>{t("onboard_step4_desc")}</p>
               </>
             )}
           </div>
@@ -3183,7 +3183,7 @@ function MainApp() {
                   style={{ minHeight: "30px", fontSize: "0.75rem", padding: "0 10px", border: "2px solid var(--line)", borderRadius: "6px", boxShadow: "2px 2px 0 var(--line)" }}
                   onClick={() => setOnboardingStep((prev) => (prev !== null ? prev - 1 : null))}
                 >
-                  Kembali
+                  {t("onboard_back")}
                 </button>
               ) : (
                 <button
@@ -3194,7 +3194,7 @@ function MainApp() {
                     localStorage.setItem("draftype_onboarded", "true");
                   }}
                 >
-                  Lewati
+                  {t("onboard_skip")}
                 </button>
               )}
               {onboardingStep < 4 ? (
@@ -3203,7 +3203,7 @@ function MainApp() {
                   style={{ minHeight: "30px", fontSize: "0.75rem", padding: "0 10px", border: "2px solid var(--line)", borderRadius: "6px", boxShadow: "2px 2px 0 var(--line)" }}
                   onClick={() => setOnboardingStep((prev) => (prev !== null ? prev + 1 : null))}
                 >
-                  Lanjut
+                  {t("onboard_next")}
                 </button>
               ) : (
                 <button
@@ -3214,7 +3214,7 @@ function MainApp() {
                     localStorage.setItem("draftype_onboarded", "true");
                   }}
                 >
-                  Selesai
+                  {t("onboard_done")}
                 </button>
               )}
             </div>

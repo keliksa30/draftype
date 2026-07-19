@@ -620,6 +620,67 @@ export const translations: TranslationDict = {
   custom_glyph_error_exists: {
     id: "Karakter '{char}' sudah ada dalam daftar!",
     en: "Character '{char}' is already in the list!"
+  },
+  // Onboarding (DrafBot)
+  onboard_title: {
+    id: "DrafBot — Asisten Font-mu",
+    en: "DrafBot — Your Font Assistant"
+  },
+  onboard_step0_title: {
+    id: "Selamat Datang di DrafType! 🎉",
+    en: "Welcome to DrafType! 🎉"
+  },
+  onboard_step0_desc: {
+    id: "Aku adalah asisten desain font-mu. Mari ikuti tur 1 menit untuk memahami cara merancang dan membuat font kustom pertamamu secara mudah!",
+    en: "I'm your font design assistant. Let's take a 1-minute tour to easily understand how to design and build your first custom font!"
+  },
+  onboard_step1_title: {
+    id: "Langkah 1: Pilih Mode Kreatif 🎨",
+    en: "Step 1: Choose Creative Mode 🎨"
+  },
+  onboard_step1_desc: {
+    id: "Gunakan tombol ini untuk memilih mode gambar. Kamu bisa melakukan tracing gambar/SVG (TypeTapToe), menggambar bebas (FingerType), atau membuat pixel-art 8-bit (BrickType).",
+    en: "Use these buttons to select your drawing mode. You can perform image/SVG tracing (TypeTapToe), freehand drawing (FingerType), or construct 8-bit pixel-art (BrickType)."
+  },
+  onboard_step2_title: {
+    id: "Langkah 2: Kanvas Gambar ✍️",
+    en: "Step 2: Drawing Canvas ✍️"
+  },
+  onboard_step2_desc: {
+    id: "Ini adalah kanvas utamamu. Di sini kamu bisa menggambar bentuk huruf aktifmu menggunakan kuas, pena garis, penghapus, atau template jiplakan.",
+    en: "This is your main canvas. Here you can draw the shape of your active character using brush, pen, eraser, or overlay guidelines."
+  },
+  onboard_step3_title: {
+    id: "Langkah 3: Simpan Hasil Gambar 💾",
+    en: "Step 3: Save Drawing 💾"
+  },
+  onboard_step3_desc: {
+    id: "Setelah selesai menggambar di kanvas, klik tombol \"Simpan\" (Place in...) ini agar karakter tersebut tersimpan ke dalam koleksi huruf font-mu.",
+    en: "Once you finish drawing on the canvas, click this \"Place in...\" button to save the character into your font glyph collection."
+  },
+  onboard_step4_title: {
+    id: "Langkah 4: Pratinjau & Ekspor 🚀",
+    en: "Step 4: Preview & Export 🚀"
+  },
+  onboard_step4_desc: {
+    id: "Ketik kalimat kustom di area pratinjau ini untuk mencoba font-mu secara real-time! Jika semuanya sudah siap, klik tombol Export di panel samping untuk mengunduh file font .OTF/.TTF-mu.",
+    en: "Type a custom sentence in this preview area to try out your font in real-time! Once everything is ready, click the Export button in the side panel to download your .OTF/.TTF font file."
+  },
+  onboard_back: {
+    id: "Kembali",
+    en: "Back"
+  },
+  onboard_skip: {
+    id: "Lewati",
+    en: "Skip"
+  },
+  onboard_next: {
+    id: "Lanjut",
+    en: "Next"
+  },
+  onboard_done: {
+    id: "Selesai",
+    en: "Done"
   }
 };
 

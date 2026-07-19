@@ -221,7 +221,7 @@ export default function DrawingCanvas({
                   }
                   fontSize="80"
                   fontWeight="bold"
-                  fill="currentColor"
+                  fill="var(--ink)"
                   opacity="0.12"
                   style={{ pointerEvents: "none", userSelect: "none" }}
                 >
@@ -493,7 +493,7 @@ export default function DrawingCanvas({
                     }
                     fontSize="80"
                     fontWeight="bold"
-                    fill="currentColor"
+                    fill="var(--ink)"
                     opacity="0.12"
                     style={{ pointerEvents: "none", userSelect: "none" }}
                   >

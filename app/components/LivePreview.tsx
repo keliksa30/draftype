@@ -53,7 +53,7 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
           const innerContent = contentMatch ? contentMatch[1] : "";
 
           // Match the UPM baseline offset (790) used in font export for perfect vertical alignment
-          const translateY = 790 - 74 * scale + (art.y ?? 0) * 5;
+          const translateY = 790 - (0.74 * viewHeight) * scale + (art.y ?? 0) * 5;
 
           // The SVG uses a 1000x1000 UPM viewBox.
           // Inside it, we translate and scale the original SVG paths using the exact OTF/TTF mapping.
