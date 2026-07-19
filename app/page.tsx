@@ -836,6 +836,76 @@ function MainApp() {
     );
   };
 
+  const cropImage = (img: HTMLImageElement): string => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return img.src;
+    
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, img.width, img.height);
+    const { data, width, height } = imgData;
+
+    let minX = width;
+    let maxX = 0;
+    let minY = height;
+    let maxY = 0;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const a = data[idx + 3];
+
+        const isTransparent = a < 5;
+        const isWhite = r > 250 && g > 250 && b > 250;
+
+        if (!isTransparent && !isWhite) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (maxX < minX || maxY < minY) {
+      return img.src;
+    }
+
+    const padding = 10;
+    const safeMinX = Math.max(0, minX - padding);
+    const safeMaxX = Math.min(width - 1, maxX + padding);
+    const safeMinY = Math.max(0, minY - padding);
+    const safeMaxY = Math.min(height - 1, maxY + padding);
+
+    const cropWidth = safeMaxX - safeMinX + 1;
+    const cropHeight = safeMaxY - safeMinY + 1;
+
+    const cropCanvas = document.createElement("canvas");
+    cropCanvas.width = cropWidth;
+    cropCanvas.height = cropHeight;
+    const cropCtx = cropCanvas.getContext("2d");
+    if (!cropCtx) return img.src;
+
+    cropCtx.drawImage(
+      canvas,
+      safeMinX,
+      safeMinY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      cropWidth,
+      cropHeight
+    );
+
+    return cropCanvas.toDataURL();
+  };
+
   const processUploadedFile = async (file: File) => {
     setFileName(file.name);
 
@@ -849,9 +919,18 @@ function MainApp() {
       return;
     }
 
+    setTraceStatus("Mengimpor dan memproses gambar...");
     const dataUrl = await readFileAsDataUrl(file);
-    setUploadedImage(dataUrl);
-    const imgSvg = makeImageSvg(dataUrl);
+    let finalDataUrl = dataUrl;
+    try {
+      const image = await loadImage(dataUrl);
+      finalDataUrl = cropImage(image);
+    } catch (e) {
+      console.error("Auto-crop failed, using original image:", e);
+    }
+
+    setUploadedImage(finalDataUrl);
+    const imgSvg = makeImageSvg(finalDataUrl);
     setWorkingSvg(imgSvg);
     setTraceStatus("Gambar di-load. Menunggu konfirmasi...");
 
@@ -860,7 +939,7 @@ function MainApp() {
       message: t("confirm_autotrace"),
       onConfirm: async () => {
         setTraceStatus("Mengimpor dan mendeteksi gambar...");
-        await runAutotraceForImage(dataUrl);
+        await runAutotraceForImage(finalDataUrl);
         setTraceStatus("Gambar berhasil di-import dan otomatis di-vectorize!");
       },
     });
