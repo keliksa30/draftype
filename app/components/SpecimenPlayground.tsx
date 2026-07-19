@@ -70,8 +70,11 @@ export default function SpecimenPlayground({ glyphMap, kerningPairs }: SpecimenP
             const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
             const innerContent = contentMatch ? contentMatch[1] : "";
 
+            // Match the UPM baseline offset (790) used in font export for perfect vertical alignment
+            const translateY = 790 - 74 * scale + (art.y ?? 0) * 5;
+
             const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" style="width: 100%; height: 100%; display: block; overflow: visible;">
-              <g transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${60 + (art.y ?? 0) * 5}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
+              <g transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${translateY}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
                 ${innerContent}
               </g>
             </svg>`;

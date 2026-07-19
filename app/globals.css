@@ -1265,12 +1265,14 @@ html.dark .sidebar-tab:hover {
 
 .stage-art {
   width: 128px;
+  height: 128px;
   transform-origin: center;
 }
 
 .stage-art svg {
   display: block;
   width: 100%;
+  height: 100%;
 }
 
 .slider-row {
