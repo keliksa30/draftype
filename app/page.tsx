@@ -87,7 +87,14 @@ function MainApp() {
   const [drawTool, setDrawTool] = useState<DrawTool>("brush");
   const [fingerZoom, setFingerZoom] = useState(100);
   const [smoothness, setSmoothness] = useState(22);
-  const [drawPoints, setDrawPoints] = useState<DrawPoint[]>([]);
+  const [drawPoints, setDrawPointsState] = useState<DrawPoint[]>([]);
+  const [isDrawingModified, setIsDrawingModified] = useState(false);
+  const setDrawPoints = (val: DrawPoint[] | ((prev: DrawPoint[]) => DrawPoint[])) => {
+    setDrawPointsState(val);
+    if (mode === "fingertype") {
+      setIsDrawingModified(true);
+    }
+  };
   const activeStrokePointsRef = useRef<DrawPoint[]>([]);
   const [dynamicGlyphs, setDynamicGlyphs] = useState<string[]>(glyphs);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -504,34 +511,35 @@ function MainApp() {
     }
   };
 
-  const compileDrawingToSvg = (): string => {
-    let innerContent = "";
-    let vbW = 100;
-    let vbH = 100;
+  const generateSvgFromDrawingPoints = (): string => {
+    // If not modified, return original SVG to preserve 100% detail
+    if (!isDrawingModified && selectedGlyph.svg) {
+      return selectedGlyph.svg;
+    }
 
-    if (selectedGlyph.svg) {
-      const contentMatch = selectedGlyph.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-      if (contentMatch) innerContent = contentMatch[1];
-      const viewBoxMatch = selectedGlyph.svg.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
-      if (viewBoxMatch) {
-        vbW = parseInt(viewBoxMatch[1]);
-        vbH = parseInt(viewBoxMatch[2]);
+    let innerContent = "";
+    if (drawPoints.length > 0) {
+      let newPath = "";
+      if (penType === "calligraphy") {
+        newPath = getCalligraphyPath(drawPoints, brushSize, penAngle);
+        newPath = `<path d="${newPath}" fill="currentColor" stroke="currentColor" stroke-width="0.2"/>`;
+      } else if (penType === "pointed") {
+        newPath = getPointedPath(drawPoints, brushSize);
+        newPath = `<path d="${newPath}" fill="currentColor" stroke="currentColor" stroke-width="0.2"/>`;
+      } else {
+        const dPath = pathFromPoints(drawPoints);
+        newPath = `<path d="${dPath}" stroke="currentColor" stroke-width="${brushSize}" stroke-linecap="round" stroke-linejoin="round" fill="${drawingFilled ? "currentColor" : "none"}"/>`;
       }
+      innerContent = newPath;
     } else if (fingerImage) {
       innerContent = `<image href="${fingerImage}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
     }
 
-    if (drawingPath) {
-      const scaleFactor = vbW / 100;
-      const newPath = `<path d="${drawingPath}" stroke="currentColor" stroke-width="${brushSize}" stroke-linecap="round" stroke-linejoin="round" fill="${drawingFilled ? "currentColor" : "none"}"/>`;
-      if (scaleFactor !== 1) {
-        innerContent += `<g transform="scale(${scaleFactor})">${newPath}</g>`;
-      } else {
-        innerContent += newPath;
-      }
-    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">${innerContent}</svg>`;
+  };
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH}" fill="none">${innerContent}</svg>`;
+  const compileDrawingToSvg = (): string => {
+    return generateSvgFromDrawingPoints();
   };
 
   const compileBrickToSvg = (): string => {
@@ -567,6 +575,25 @@ function MainApp() {
       if (uploadedImage) setFingerImage(uploadedImage);
       const vectorSvg = glyphMap[activeGlyph]?.svg || "";
       setWorkingSvg(vectorSvg);
+      
+      // Automatically load SVG to canvas points when entering Fingertype mode
+      if (vectorSvg) {
+        const parsed = pointsFromSvg(vectorSvg);
+        if (parsed.length > 0) {
+          setDrawPoints(parsed);
+          setDrawHistory([{ points: parsed, filled: false }]);
+          setDrawHistoryIndex(0);
+        } else {
+          setDrawPoints([]);
+          setDrawHistory([]);
+          setDrawHistoryIndex(-1);
+        }
+      } else {
+        setDrawPoints([]);
+        setDrawHistory([]);
+        setDrawHistoryIndex(-1);
+      }
+      setIsDrawingModified(false); // Reset modification flag when entering
     } else if (nextMode === "brickType") {
       const currentGrid = brickGrids[activeGlyph];
       if (!currentGrid) {
@@ -2014,47 +2041,16 @@ function MainApp() {
   };
 
   const convertDrawingToGlyph = () => {
-    let innerContent = "";
-    let vbW = 100;
-    let vbH = 100;
+    // If not modified, keep original SVG to prevent any detail loss
+    if (!isDrawingModified && selectedGlyph.svg) {
+      setExportStatus("No changes made. Vector kept at original resolution.");
+      return;
+    }
 
     setPreviousGlyphSvg(selectedGlyph?.svg || "");
     setLastPlacedStrokes(drawPoints);
 
-    if (selectedGlyph.svg) {
-      const contentMatch = selectedGlyph.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-      if (contentMatch) {
-        innerContent = contentMatch[1];
-      }
-      const viewBoxMatch = selectedGlyph.svg.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
-      if (viewBoxMatch) {
-        vbW = parseInt(viewBoxMatch[1]);
-        vbH = parseInt(viewBoxMatch[2]);
-      }
-    } else if (fingerImage) {
-      innerContent = `<image href="${fingerImage}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
-    }
-
-    if (drawingPath) {
-      const scaleFactor = vbW / 100;
-      let newPath = "";
-      if (penType === "calligraphy") {
-        const calligD = getCalligraphyPath(smoothedDrawPoints, brushSize, penAngle);
-        newPath = `<path d="${calligD}" fill="currentColor" stroke="currentColor" stroke-width="0.2"/>`;
-      } else if (penType === "pointed") {
-        const pointedD = getPointedPath(smoothedDrawPoints, brushSize);
-        newPath = `<path d="${pointedD}" fill="currentColor" stroke="currentColor" stroke-width="0.2"/>`;
-      } else {
-        newPath = `<path d="${drawingPath}" stroke="currentColor" stroke-width="${brushSize}" stroke-linecap="round" stroke-linejoin="round" fill="${drawingFilled ? "currentColor" : "none"}"/>`;
-      }
-      if (scaleFactor !== 1) {
-        innerContent += `<g transform="scale(${scaleFactor})">${newPath}</g>`;
-      } else {
-        innerContent += newPath;
-      }
-    }
-
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbW} ${vbH}" fill="none">${innerContent}</svg>`;
+    const svg = generateSvgFromDrawingPoints();
     setWorkingSvg(svg);
     setRevertGlyphMap(glyphMap);
     
@@ -2062,8 +2058,7 @@ function MainApp() {
     setGlyphMap(nextGlyphMap);
     pushGlobalHistory(`Menggambar ${activeGlyph}`, nextGlyphMap);
 
-    setDrawPoints([]);
-    setDrawingFilled(false);
+    setIsDrawingModified(false);
   };
 
   // ─── Auto Edit ───────────────────────────────────────────────────────────────

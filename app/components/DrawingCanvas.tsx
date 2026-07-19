@@ -260,9 +260,9 @@ export default function DrawingCanvas({
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
                 />
               ) : null}
-              {selectedGlyph.svg ? (
+              {selectedGlyph.svg && drawPoints.length === 0 ? (
                 <g
-                  opacity={1}
+                  opacity={0.3}
                   style={{
                     pointerEvents: "none",
                     transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
