@@ -518,6 +518,8 @@ function MainApp() {
     }
 
     let innerContent = "";
+    let vbX = 0;
+    let vbY = 0;
     let viewBoxWidth = 100;
     let viewBoxHeight = 100;
 
@@ -527,26 +529,30 @@ function MainApp() {
       if (contentMatch) {
         innerContent = contentMatch[1];
       }
-      const viewBoxMatch = selectedGlyph.svg.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
+      // Handle floating point viewBoxes (e.g. from potrace: "0 0 512.000000 512.000000")
+      const viewBoxMatch = selectedGlyph.svg.match(/viewBox=["']\s*(-?\d*\.?\d+)\s+(-?\d*\.?\d+)\s+(\d*\.?\d+)\s+(\d*\.?\d+)\s*["']/i);
       if (viewBoxMatch) {
-        viewBoxWidth = parseInt(viewBoxMatch[1]);
-        viewBoxHeight = parseInt(viewBoxMatch[2]);
+        vbX = parseFloat(viewBoxMatch[1]);
+        vbY = parseFloat(viewBoxMatch[2]);
+        viewBoxWidth = parseFloat(viewBoxMatch[3]);
+        viewBoxHeight = parseFloat(viewBoxMatch[4]);
       }
     } else if (fingerImage) {
       innerContent = `<image href="${fingerImage}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
     }
 
     // 2. Append drawing/eraser strokes on top, scaled to the original SVG viewBox
-    if (drawPoints.length > 0) {
-      const scaleFactor = viewBoxWidth / 100;
+    if (smoothedDrawPoints.length > 0) {
+      const scaleX = viewBoxWidth / 100;
+      const scaleY = viewBoxHeight / 100;
       
       // Group points into consecutive segments by tool type (brush/eraser)
       const segments: { points: DrawPoint[]; isEraser: boolean }[] = [];
       let currentSeg: DrawPoint[] = [];
       let currentIsEraser = false;
 
-      for (let i = 0; i < drawPoints.length; i++) {
-        const p = drawPoints[i];
+      for (let i = 0; i < smoothedDrawPoints.length; i++) {
+        const p = smoothedDrawPoints[i];
         const isEraser = !!p.isEraser;
 
         if (p.move || isEraser !== currentIsEraser) {
@@ -569,13 +575,15 @@ function MainApp() {
         // Scale coordinates directly instead of wrapping in a group transform
         const scaledPoints = segment.points.map((p) => ({
           ...p,
-          x: p.x * scaleFactor,
-          y: p.y * scaleFactor,
-          cx: p.cx !== undefined ? p.cx * scaleFactor : undefined,
-          cy: p.cy !== undefined ? p.cy * scaleFactor : undefined,
+          x: p.x * scaleX + vbX,
+          y: p.y * scaleY + vbY,
+          cx: p.cx !== undefined ? p.cx * scaleX + vbX : undefined,
+          cy: p.cy !== undefined ? p.cy * scaleY + vbY : undefined,
         }));
 
-        const segmentBrushSize = brushSize * scaleFactor;
+        // Average scale factor for brush size approximation
+        const avgScale = (scaleX + scaleY) / 2;
+        const segmentBrushSize = brushSize * avgScale;
         let pathD = "";
         let strokeColor = "currentColor";
         let fillColor = "none";
@@ -615,7 +623,7 @@ function MainApp() {
       }
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" fill="none">${innerContent}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vbX} ${vbY} ${viewBoxWidth} ${viewBoxHeight}" fill="none">${innerContent}</svg>`;
   };
 
   const compileDrawingToSvg = (): string => {
@@ -2000,13 +2008,13 @@ function MainApp() {
         const activePathEl = document.getElementById("active-stroke-path");
         if (activePathEl) {
           let d = "";
-          const smoothed = smoothPoints(activeStrokePointsRef.current, smoothness);
+          const activePoints = activeStrokePointsRef.current;
           if (penType === "calligraphy" && drawTool !== "eraser") {
-            d = getCalligraphyPath(smoothed, brushSize, penAngle);
+            d = getCalligraphyPath(activePoints, brushSize, penAngle);
           } else if (penType === "pointed" && drawTool !== "eraser") {
-            d = getPointedPath(smoothed, brushSize);
+            d = getPointedPath(activePoints, brushSize);
           } else {
-            d = pathFromPoints(smoothed);
+            d = pathFromPoints(activePoints);
           }
           activePathEl.setAttribute("d", d);
         }
