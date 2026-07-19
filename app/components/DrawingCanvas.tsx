@@ -56,6 +56,16 @@ interface DrawingCanvasProps {
   templateStyle?: "none" | "sans" | "serif" | "cursive";
 }
 
+const forceSvgToFullPercent = (svgString: string | undefined): string => {
+  if (!svgString) return "";
+  // Match the opening <svg> tag and strip existing absolute width/height attributes, forcing them to 100%
+  return svgString.replace(/<svg([^>]*)>/i, (match, attrs) => {
+    let cleanAttrs = attrs.replace(/\bwidth=["'][^"']*["']/gi, "");
+    cleanAttrs = cleanAttrs.replace(/\bheight=["'][^"']*["']/gi, "");
+    return `<svg${cleanAttrs} width="100%" height="100%">`;
+  });
+};
+
 export default function DrawingCanvas({
   mode,
   activeGlyph,
@@ -236,7 +246,7 @@ export default function DrawingCanvas({
                     transform: `translate(${prevGlyphArt?.x ?? 0}%, ${prevGlyphArt?.y ?? 0}%) rotate(${prevGlyphArt?.rotation ?? 0}deg) scale(${(prevGlyphArt?.scale ?? 100) / 100})`,
                     transformOrigin: "center",
                   }}
-                  dangerouslySetInnerHTML={{ __html: prevGlyphSvg }}
+                  dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(prevGlyphSvg) }}
                 />
               ) : null}
               {showOnionSkin && nextGlyphSvg ? (
@@ -247,7 +257,7 @@ export default function DrawingCanvas({
                     transform: `translate(${nextGlyphArt?.x ?? 0}%, ${nextGlyphArt?.y ?? 0}%) rotate(${nextGlyphArt?.rotation ?? 0}deg) scale(${(nextGlyphArt?.scale ?? 100) / 100})`,
                     transformOrigin: "center",
                   }}
-                  dangerouslySetInnerHTML={{ __html: nextGlyphSvg }}
+                  dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
                 />
               ) : null}
               {selectedGlyph.svg ? (
@@ -258,7 +268,7 @@ export default function DrawingCanvas({
                     transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
                     transformOrigin: "center",
                   }}
-                  dangerouslySetInnerHTML={{ __html: selectedGlyph.svg }}
+                  dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(selectedGlyph.svg) }}
                 />
               ) : null}
               {showGuides ? (
