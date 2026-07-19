@@ -1,9 +1,49 @@
-# 🎨 DrafType - Custom Font Builder
+# 🎨 DrafType — Premium Custom Font Builder
 
-> **Bikin Font Ga Pernah Semudah Ini!**  
-> *Making custom fonts has never been this easy.*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/keliksa30/draftype/main/public/logo_draftype.png" alt="DrafType Logo" width="360px"/>
+</p>
 
-DrafType is a powerful, interactive, and user-friendly web application designed to help creators, designers, and developers craft custom fonts directly in the browser. Whether you want to trace images, draw freehand calligraphy, or design retro pixel-art characters, DrafType provides all the tools you need and lets you export your creations as standard `.otf` or `.ttf` font files.
+<p align="center">
+  <b>Bikin Font Ga Pernah Semudah Ini!</b><br/>
+  <i>Making custom fonts has never been this easy.</i>
+</p>
+
+<p align="center">
+  <a href="https://draftype.woyo.workers.dev" target="_blank">
+    <img src="https://img.shields.io/badge/Live%20Demo-draftype.woyo.workers.dev-brightgreen?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Live Demo"/>
+  </a>
+  <a href="https://github.com/keliksa30/draftype/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License"/>
+  </a>
+  <img src="https://img.shields.io/badge/Made%20With-Next.js%20%26%20Vite-orange?style=for-the-badge&logo=react&logoColor=white" alt="Tech Stack"/>
+</p>
+
+---
+
+**DrafType** is a premium, interactive, and user-friendly web application designed to help creators, designers, and developers craft custom typography directly in their browser. With support for image tracing, freehand canvas drawing, and retro pixel-grid drafting, DrafType provides a comprehensive suite of tools to create and export professional `.otf` and `.ttf` font files instantly.
+
+## 🚀 Live Demo & Release
+
+The application is deployed on Cloudflare Pages and is publicly accessible here:
+👉 **[draftype.woyo.workers.dev](https://draftype.woyo.workers.dev)**
+
+---
+
+## 📌 Table of Contents
+
+- [🚀 Key Features](#-key-features)
+  - [1. 🔍 TypeTapToe Mode (Image & SVG Tracing)](#1--typetaptoe-mode-image--svg-tracing)
+  - [2. ✍️ FingerType Mode (Freehand Drawing)](#2-️-fingertype-mode-freehand-drawing)
+  - [3. 🧱 BrickType Mode (Retro & Pixel Art)](#3--bricktype-mode-retro--pixel-art)
+  - [4. 🎛️ Utility & Playground Features](#4-️-utility--playground-features)
+- [🛠️ System Architecture](#-system-architecture)
+- [💻 Local Development](#-local-development)
+  - [Prerequisites](#prerequisites)
+  - [Getting Started](#getting-started)
+- [📁 Tech Stack](#-tech-stack)
+- [📜 Commands Reference](#-commands-reference)
+- [📄 License](#-license)
 
 ---
 
@@ -20,9 +60,11 @@ DrafType supports three unique creative modes designed to fit different design s
 *   **Brush & Pen Tools:** Draw vector paths using smooth brush strokes or precise vector pen anchor points.
 *   **Smoothness Controls:** Automatically neatens and smooths rough mouse or touchscreen paths.
 *   **Path Customization:** Toggle between Calligraphy or Pointed pen styles, adjust brush size, and utilize reference backgrounds.
+*   **Touchscreen-Optimized:** Fully optimized drawing canvas on iOS, Android, and tablet devices with pointer capture safety.
 
 ### 3. 🧱 BrickType Mode (Retro & Pixel Art)
 *   **Grid Editor:** Easily design retro pixel fonts by placing blocks on an interactive grid.
+*   **Mobile-Friendly Drag Drawing:** Draw and erase across grid blocks smoothly using drag gestures on mobile or tablet touchscreens.
 *   **Grid Scaling:** Customize grid dimensions and block offsets.
 *   **Autofill & Clear:** Powerful pixel manipulations for drawing symmetry.
 
@@ -91,7 +133,7 @@ graph TD
 
 ## 📁 Tech Stack
 
-*   **Frontend Core:** React, TypeScript, Next.js, HTML5 Canvas
+*   **Frontend Core:** React 19, TypeScript, Next.js, HTML5 Canvas
 *   **Styling:** Vanilla CSS (including custom premium dark mode themes)
 *   **Local Storage:** IndexedDB (via custom hooks)
 *   **Font Generation:** `opentype.js` (for parsing, manipulating, and writing OTF/TTF binaries)
@@ -105,6 +147,12 @@ graph TD
 *   `npm run build` - Validates the Vinext production build.
 *   `npm test` - Runs test suites.
 *   `npm run db:generate` - Generates Drizzle migrations for DB schemas if Cloudflare D1 integration is enabled.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
