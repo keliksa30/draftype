@@ -409,6 +409,7 @@ export default function DrawingCanvas({
                 maxWidth: "460px",
                 margin: "0 auto",
                 position: "relative",
+                aspectRatio: "1 / 1",
               }}
               onPointerDown={(e) => {
                 e.preventDefault();

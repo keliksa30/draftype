@@ -549,6 +549,23 @@ export const applyAutoKerning = (map: Record<string, GlyphArt>): Record<string, 
 };
 
 const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
+  // Detect pixel-art BrickType SVGs by checking for square viewBox (e.g. 8x8, 16x16, 32x32)
+  const viewBoxMatch = art.svg?.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
+  if (viewBoxMatch) {
+    const vbW = parseInt(viewBoxMatch[1]);
+    const vbH = parseInt(viewBoxMatch[2]);
+    // Square viewBox smaller than 100 indicates pixel-art — use uniform scale for all characters
+    if (vbW === vbH && vbW < 100) {
+      return {
+        ...art,
+        scale: 120,
+        x: 0,
+        y: 0,
+        rotation: 0,
+      };
+    }
+  }
+
   const isUpper = glyph >= "A" && glyph <= "Z";
   const isDigit = glyph >= "0" && glyph <= "9";
   const isLower = glyph >= "a" && glyph <= "z";
