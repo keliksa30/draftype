@@ -322,58 +322,6 @@ function MainApp() {
     }
   }, []);
 
-  // Global Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const activeTag = document.activeElement?.tagName.toLowerCase();
-      if (activeTag === "input" || activeTag === "textarea") return;
-
-      const key = event.key.toLowerCase();
-      const isCmdOrCtrl = event.metaKey || event.ctrlKey;
-
-      // Undo / Redo
-      if (isCmdOrCtrl && key === "z") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          if (mode === "fingertype") redoDrawing();
-          else if (mode === "brickType") redoBrick();
-        } else {
-          if (mode === "fingertype") undoDrawing();
-          else if (mode === "brickType") undoBrick();
-          else if (mode === "typeTapToe") undoWorkingChange();
-        }
-        return;
-      }
-      if (isCmdOrCtrl && key === "y") {
-        event.preventDefault();
-        if (mode === "fingertype") redoDrawing();
-        else if (mode === "brickType") redoBrick();
-        return;
-      }
-
-      // Drawing Tool Selection
-      if (mode === "fingertype") {
-        if (key === "b") { event.preventDefault(); setDrawTool("brush"); }
-        else if (key === "p") { event.preventDefault(); setDrawTool("pen"); }
-        else if (key === "e") { event.preventDefault(); setDrawTool("eraser"); }
-        else if (key === "v") { event.preventDefault(); setDrawTool("move"); }
-        else if (key === "h") { event.preventDefault(); setDrawTool("hand"); }
-        else if (key === "l") { event.preventDefault(); setDrawTool("line"); }
-        else if (key === "r") { event.preventDefault(); setDrawTool("rect"); }
-        else if (key === "c") { event.preventDefault(); setDrawTool("ellipse"); }
-        else if (key === "f") { event.preventDefault(); setDrawTool("fill"); }
-      } else if (mode === "brickType") {
-        if (key === "e") { event.preventDefault(); setBrickTool("eraser"); }
-        else if (key === "b" || key === "p") { event.preventDefault(); setBrickTool("pencil"); }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [mode, undoDrawing, redoDrawing, undoBrick, redoBrick, undoWorkingChange]);
-
 
 
   const smoothedDrawPoints = useMemo(
@@ -2790,6 +2738,58 @@ function MainApp() {
   const nextGlyph = activeIndex < dynamicGlyphs.length - 1 ? dynamicGlyphs[activeIndex + 1] : null;
   const prevGlyphSvg = prevGlyph ? glyphMap[prevGlyph]?.svg : "";
   const nextGlyphSvg = nextGlyph ? glyphMap[nextGlyph]?.svg : "";
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea") return;
+
+      const key = event.key.toLowerCase();
+      const isCmdOrCtrl = event.metaKey || event.ctrlKey;
+
+      // Undo / Redo
+      if (isCmdOrCtrl && key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          if (mode === "fingertype") redoDrawing();
+          else if (mode === "brickType") redoBrick();
+        } else {
+          if (mode === "fingertype") undoDrawing();
+          else if (mode === "brickType") undoBrick();
+          else if (mode === "typeTapToe") undoWorkingChange();
+        }
+        return;
+      }
+      if (isCmdOrCtrl && key === "y") {
+        event.preventDefault();
+        if (mode === "fingertype") redoDrawing();
+        else if (mode === "brickType") redoBrick();
+        return;
+      }
+
+      // Drawing Tool Selection
+      if (mode === "fingertype") {
+        if (key === "b") { event.preventDefault(); setDrawTool("brush"); }
+        else if (key === "p") { event.preventDefault(); setDrawTool("pen"); }
+        else if (key === "e") { event.preventDefault(); setDrawTool("eraser"); }
+        else if (key === "v") { event.preventDefault(); setDrawTool("move"); }
+        else if (key === "h") { event.preventDefault(); setDrawTool("hand"); }
+        else if (key === "l") { event.preventDefault(); setDrawTool("line"); }
+        else if (key === "r") { event.preventDefault(); setDrawTool("rect"); }
+        else if (key === "c") { event.preventDefault(); setDrawTool("ellipse"); }
+        else if (key === "f") { event.preventDefault(); setDrawTool("fill"); }
+      } else if (mode === "brickType") {
+        if (key === "e") { event.preventDefault(); setBrickTool("eraser"); }
+        else if (key === "b" || key === "p") { event.preventDefault(); setBrickTool("pencil"); }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mode, undoDrawing, redoDrawing, undoBrick, redoBrick, undoWorkingChange]);
 
   return (
     <main className="font-lab">
