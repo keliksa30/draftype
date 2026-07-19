@@ -139,7 +139,7 @@ export const pathFromPoints = (points: DrawPoint[]): string =>
 
 export const pointsFromPath = (pathStr: string): DrawPoint[] => {
   const points: DrawPoint[] = [];
-  const regex = /([MQLCCZzHhVv])\s*([0-9e.-]+(?:\s*,?\s*[0-9e.-]+)*)?/g;
+  const regex = /([MQLCCSsTTtAAaZzHhVv])\s*([0-9e.-]+(?:\s*,?\s*[0-9e.-]+)*)?/g;
   let match;
   let currX = 0;
   let currY = 0;
@@ -236,6 +236,52 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
         currX = x;
         currY = y;
         points.push({ x, y, cx, cy, curve: true, move: false });
+      }
+    } else if (cmd === 'S' || cmd === 's') {
+      const isRelative = cmd === 's';
+      for (let i = 0; i < args.length; i += 4) {
+        if (i + 3 >= args.length) break;
+        let cx = args[i];
+        let cy = args[i+1];
+        let x = args[i+2];
+        let y = args[i+3];
+        if (isRelative) {
+          cx += currX;
+          cy += currY;
+          x += currX;
+          y += currY;
+        }
+        currX = x;
+        currY = y;
+        points.push({ x, y, cx, cy, curve: true, move: false });
+      }
+    } else if (cmd === 'T' || cmd === 't') {
+      const isRelative = cmd === 't';
+      for (let i = 0; i < args.length; i += 2) {
+        if (i + 1 >= args.length) break;
+        let x = args[i];
+        let y = args[i+1];
+        if (isRelative) {
+          x += currX;
+          y += currY;
+        }
+        currX = x;
+        currY = y;
+        points.push({ x, y, curve: true, move: false });
+      }
+    } else if (cmd === 'A' || cmd === 'a') {
+      const isRelative = cmd === 'a';
+      for (let i = 0; i < args.length; i += 7) {
+        if (i + 6 >= args.length) break;
+        let x = args[i+5];
+        let y = args[i+6];
+        if (isRelative) {
+          x += currX;
+          y += currY;
+        }
+        currX = x;
+        currY = y;
+        points.push({ x, y, move: false });
       }
     } else if (cmd === 'Z' || cmd === 'z') {
       currX = startX;
