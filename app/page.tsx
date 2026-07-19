@@ -518,24 +518,98 @@ function MainApp() {
     }
 
     let innerContent = "";
-    if (drawPoints.length > 0) {
-      let newPath = "";
-      if (penType === "calligraphy") {
-        newPath = getCalligraphyPath(drawPoints, brushSize, penAngle);
-        newPath = `<path d="${newPath}" fill="currentColor" stroke="currentColor" stroke-width="0.2"/>`;
-      } else if (penType === "pointed") {
-        newPath = getPointedPath(drawPoints, brushSize);
-        newPath = `<path d="${newPath}" fill="currentColor" stroke="currentColor" stroke-width="0.2"/>`;
-      } else {
-        const dPath = pathFromPoints(drawPoints);
-        newPath = `<path d="${dPath}" stroke="currentColor" stroke-width="${brushSize}" stroke-linecap="round" stroke-linejoin="round" fill="${drawingFilled ? "currentColor" : "none"}"/>`;
+    let viewBoxWidth = 100;
+    let viewBoxHeight = 100;
+
+    // 1. Keep original high-resolution SVG contents untouched
+    if (selectedGlyph.svg) {
+      const contentMatch = selectedGlyph.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+      if (contentMatch) {
+        innerContent = contentMatch[1];
       }
-      innerContent = newPath;
+      const viewBoxMatch = selectedGlyph.svg.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
+      if (viewBoxMatch) {
+        viewBoxWidth = parseInt(viewBoxMatch[1]);
+        viewBoxHeight = parseInt(viewBoxMatch[2]);
+      }
     } else if (fingerImage) {
       innerContent = `<image href="${fingerImage}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`;
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">${innerContent}</svg>`;
+    // 2. Append drawing/eraser strokes on top, scaled to the original SVG viewBox
+    if (drawPoints.length > 0) {
+      const scaleFactor = viewBoxWidth / 100;
+      
+      // Group points into consecutive segments by tool type (brush/eraser)
+      const segments: { points: DrawPoint[]; isEraser: boolean }[] = [];
+      let currentSeg: DrawPoint[] = [];
+      let currentIsEraser = false;
+
+      for (let i = 0; i < drawPoints.length; i++) {
+        const p = drawPoints[i];
+        const isEraser = !!p.isEraser;
+
+        if (p.move || isEraser !== currentIsEraser) {
+          if (currentSeg.length > 0) {
+            segments.push({ points: currentSeg, isEraser: currentIsEraser });
+          }
+          currentSeg = [p];
+          currentIsEraser = isEraser;
+        } else {
+          currentSeg.push(p);
+        }
+      }
+      if (currentSeg.length > 0) {
+        segments.push({ points: currentSeg, isEraser: currentIsEraser });
+      }
+
+      // Convert each segment to a path element and scale it
+      let appendedPathsSvg = "";
+      for (const segment of segments) {
+        let pathD = "";
+        let strokeColor = "currentColor";
+        let fillColor = "none";
+        let strokeWidth = brushSize.toString();
+
+        if (segment.isEraser) {
+          pathD = pathFromPoints(segment.points);
+          strokeColor = "#ffffff"; // White color for subtraction
+          fillColor = "none";
+          strokeWidth = brushSize.toString();
+        } else {
+          if (penType === "calligraphy") {
+            pathD = getCalligraphyPath(segment.points, brushSize, penAngle);
+            strokeColor = "currentColor";
+            fillColor = "currentColor";
+            strokeWidth = "0.2";
+          } else if (penType === "pointed") {
+            pathD = getPointedPath(segment.points, brushSize);
+            strokeColor = "currentColor";
+            fillColor = "currentColor";
+            strokeWidth = "0.2";
+          } else {
+            pathD = pathFromPoints(segment.points);
+            strokeColor = "currentColor";
+            fillColor = drawingFilled ? "currentColor" : "none";
+            strokeWidth = brushSize.toString();
+          }
+        }
+
+        if (pathD) {
+          appendedPathsSvg += `<path d="${pathD}" stroke="${strokeColor}" fill="${fillColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
+        }
+      }
+
+      if (appendedPathsSvg) {
+        if (scaleFactor !== 1) {
+          innerContent += `<g transform="scale(${scaleFactor})">${appendedPathsSvg}</g>`;
+        } else {
+          innerContent += appendedPathsSvg;
+        }
+      }
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" fill="none">${innerContent}</svg>`;
   };
 
   const compileDrawingToSvg = (): string => {
@@ -576,23 +650,9 @@ function MainApp() {
       const vectorSvg = glyphMap[activeGlyph]?.svg || "";
       setWorkingSvg(vectorSvg);
       
-      // Automatically load SVG to canvas points when entering Fingertype mode
-      if (vectorSvg) {
-        const parsed = pointsFromSvg(vectorSvg);
-        if (parsed.length > 0) {
-          setDrawPoints(parsed);
-          setDrawHistory([{ points: parsed, filled: false }]);
-          setDrawHistoryIndex(0);
-        } else {
-          setDrawPoints([]);
-          setDrawHistory([]);
-          setDrawHistoryIndex(-1);
-        }
-      } else {
-        setDrawPoints([]);
-        setDrawHistory([]);
-        setDrawHistoryIndex(-1);
-      }
+      setDrawPoints([]);
+      setDrawHistory([]);
+      setDrawHistoryIndex(-1);
       setIsDrawingModified(false); // Reset modification flag when entering
     } else if (nextMode === "brickType") {
       const currentGrid = brickGrids[activeGlyph];
@@ -1827,7 +1887,14 @@ function MainApp() {
       return;
     }
     if (drawTool === "eraser") {
-      eraseNear(point);
+      activeStrokePointsRef.current = [{ ...point, move: true, isEraser: true }];
+      const activePathEl = document.getElementById("active-stroke-path");
+      if (activePathEl) {
+        activePathEl.setAttribute("d", "");
+        activePathEl.setAttribute("fill", "none");
+        activePathEl.setAttribute("stroke", "white");
+        activePathEl.setAttribute("stroke-width", brushSize.toString());
+      }
       setIsDrawing(true);
       return;
     }
@@ -1903,15 +1970,6 @@ function MainApp() {
         }
         return;
       }
-      if (drawTool === "eraser") {
-        const last = lastErasePointRef.current;
-        if (last && Math.hypot(point.x - last.x, point.y - last.y) < 1.0) {
-          return;
-        }
-        lastErasePointRef.current = point;
-        eraseNear(point);
-        return;
-      }
       if (drawTool === "pen") {
         setDrawPoints((points) => {
           const lastIndex = points.length - 1;
@@ -1924,22 +1982,22 @@ function MainApp() {
         });
         return;
       }
-      if (drawTool === "brush") {
+      if (drawTool === "brush" || drawTool === "eraser") {
         const last = activeStrokePointsRef.current[activeStrokePointsRef.current.length - 1];
         const isMobile = typeof window !== "undefined" && /Mobi|Android|iPhone/i.test(navigator.userAgent);
         const minDist = isMobile ? 1.2 : 0.4;
         if (last && Math.hypot(point.x - last.x, point.y - last.y) < minDist) {
           return;
         }
-        activeStrokePointsRef.current.push({ ...point, move: false });
+        activeStrokePointsRef.current.push({ ...point, move: false, isEraser: drawTool === "eraser" });
 
         const activePathEl = document.getElementById("active-stroke-path");
         if (activePathEl) {
           let d = "";
           const smoothed = smoothPoints(activeStrokePointsRef.current, smoothness);
-          if (penType === "calligraphy") {
+          if (penType === "calligraphy" && drawTool !== "eraser") {
             d = getCalligraphyPath(smoothed, brushSize, penAngle);
-          } else if (penType === "pointed") {
+          } else if (penType === "pointed" && drawTool !== "eraser") {
             d = getPointedPath(smoothed, brushSize);
           } else {
             d = pathFromPoints(smoothed);
@@ -2004,7 +2062,7 @@ function MainApp() {
     }
 
     if (isDrawing && (drawTool === "brush" || drawTool === "eraser" || drawTool === "move" || drawTool === "pen")) {
-      if (drawTool === "brush") {
+      if (drawTool === "brush" || drawTool === "eraser") {
         const activePathEl = document.getElementById("active-stroke-path");
         if (activePathEl) {
           activePathEl.setAttribute("d", "");
@@ -2943,7 +3001,6 @@ function MainApp() {
               redoDrawing={redoDrawing}
               newPenStroke={newPenStroke}
               clearDrawing={clearDrawing}
-              loadSvgToCanvas={loadSvgToCanvas}
               showOnionSkin={showOnionSkin}
               setShowOnionSkin={setShowOnionSkin}
               snapToGrid={snapToGrid}

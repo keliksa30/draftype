@@ -16,7 +16,6 @@ interface FingerTypePanelProps {
   redoDrawing: () => void;
   newPenStroke: () => void;
   clearDrawing: () => void;
-  loadSvgToCanvas: () => void;
   showOnionSkin: boolean;
   setShowOnionSkin: (val: boolean) => void;
   snapToGrid: boolean;
@@ -50,7 +49,6 @@ export default function FingerTypePanel({
   redoDrawing,
   newPenStroke,
   clearDrawing,
-  loadSvgToCanvas,
   showOnionSkin,
   setShowOnionSkin,
   snapToGrid,
@@ -73,9 +71,6 @@ export default function FingerTypePanel({
       </label>
       <button className="action-button" onClick={() => setReferenceImage("")} title={t("clear_ref")}>
         {t("clear_ref")}
-      </button>
-      <button className="action-button yellow" onClick={loadSvgToCanvas} title={t("open_vector_canvas")}>
-        {t("open_vector_canvas")}
       </button>
       <div className="button-split">
         <button

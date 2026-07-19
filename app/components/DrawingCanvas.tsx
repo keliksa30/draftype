@@ -260,9 +260,9 @@ export default function DrawingCanvas({
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
                 />
               ) : null}
-              {selectedGlyph.svg && drawPoints.length === 0 ? (
+              {selectedGlyph.svg ? (
                 <g
-                  opacity={0.3}
+                  opacity={1}
                   style={{
                     pointerEvents: "none",
                     transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
@@ -315,30 +315,81 @@ export default function DrawingCanvas({
                   preserveAspectRatio="xMidYMid meet"
                 />
               ) : null}
-              {penType === "calligraphy" ? (
-                <path
-                  d={getCalligraphyPath(smoothedDrawPoints, brushSize, penAngle)}
-                  fill="currentColor"
-                  stroke="currentColor"
-                  strokeWidth="0.2"
-                />
-              ) : penType === "pointed" ? (
-                <path
-                  d={getPointedPath(smoothedDrawPoints, brushSize)}
-                  fill="currentColor"
-                  stroke="currentColor"
-                  strokeWidth="0.2"
-                />
-              ) : (
-                <path
-                  d={drawingPath}
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={brushSize}
-                  fill={drawingFilled ? "currentColor" : "none"}
-                />
-              )}
+              {(() => {
+                const segments: { points: DrawPoint[]; isEraser: boolean }[] = [];
+                let currentSeg: DrawPoint[] = [];
+                let currentIsEraser = false;
+
+                for (let i = 0; i < smoothedDrawPoints.length; i++) {
+                  const p = smoothedDrawPoints[i];
+                  const isEraser = !!p.isEraser;
+
+                  if (p.move || isEraser !== currentIsEraser) {
+                    if (currentSeg.length > 0) {
+                      segments.push({ points: currentSeg, isEraser: currentIsEraser });
+                    }
+                    currentSeg = [p];
+                    currentIsEraser = isEraser;
+                  } else {
+                    currentSeg.push(p);
+                  }
+                }
+                if (currentSeg.length > 0) {
+                  segments.push({ points: currentSeg, isEraser: currentIsEraser });
+                }
+
+                return segments.map((seg, idx) => {
+                  if (seg.isEraser) {
+                    const pathD = pathFromPoints(seg.points);
+                    return (
+                      <path
+                        key={`seg-${idx}`}
+                        d={pathD}
+                        stroke="var(--white)"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={brushSize}
+                        fill="none"
+                      />
+                    );
+                  } else {
+                    if (penType === "calligraphy") {
+                      return (
+                        <path
+                          key={`seg-${idx}`}
+                          d={getCalligraphyPath(seg.points, brushSize, penAngle)}
+                          fill="currentColor"
+                          stroke="currentColor"
+                          strokeWidth="0.2"
+                        />
+                      );
+                    } else if (penType === "pointed") {
+                      return (
+                        <path
+                          key={`seg-${idx}`}
+                          d={getPointedPath(seg.points, brushSize)}
+                          fill="currentColor"
+                          stroke="currentColor"
+                          strokeWidth="0.2"
+                        />
+                      );
+                    } else {
+                      const pathD = pathFromPoints(seg.points);
+                      return (
+                        <path
+                          key={`seg-${idx}`}
+                          d={pathD}
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={brushSize}
+                          fill={drawingFilled ? "currentColor" : "none"}
+                        />
+                      );
+                    }
+                  }
+                });
+              })()}
               <path
                 id="active-stroke-path"
                 stroke="currentColor"

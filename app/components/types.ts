@@ -25,6 +25,7 @@ export type DrawPoint = {
   curve?: boolean;
   cx?: number;
   cy?: number;
+  isEraser?: boolean;
 };
 
 export type BrickGrid = {
