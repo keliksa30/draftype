@@ -174,8 +174,8 @@ export default function DrawingCanvas({
               onPointerDown={startDrawing}
               onPointerMove={continueDrawing}
               onPointerUp={finishDrawing}
+              onPointerCancel={finishDrawing}
               onPointerLeave={() => {
-                finishDrawing();
                 setPenPreviewPoint(null);
               }}
               role="img"
@@ -386,7 +386,59 @@ export default function DrawingCanvas({
                 margin: "0 auto",
                 position: "relative",
               }}
-              onPointerLeave={() => setIsDrawingBrick(false)}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                try {
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                } catch (err) {}
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const size = getActiveBrickGrid().size;
+                const col = Math.floor((x / rect.width) * size);
+                const row = Math.floor((y / rect.height) * size);
+
+                if (row >= 0 && row < size && col >= 0 && col < size) {
+                  setPreviousBrickGrid(getActiveBrickGrid());
+                  setIsDrawingBrick(true);
+                  toggleBrickCell(row, col);
+                  setLastToggledCell({ r: row, c: col });
+                }
+              }}
+              onPointerMove={(e) => {
+                e.preventDefault();
+                if (!isDrawingBrick) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const size = getActiveBrickGrid().size;
+                const col = Math.floor((x / rect.width) * size);
+                const row = Math.floor((y / rect.height) * size);
+
+                if (row >= 0 && row < size && col >= 0 && col < size) {
+                  if (lastToggledCell?.r !== row || lastToggledCell?.c !== col) {
+                    const targetVal = brickTool === "pencil";
+                    toggleBrickCell(row, col, targetVal);
+                    setLastToggledCell({ r: row, c: col });
+                  }
+                }
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault();
+                try {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                } catch (err) {}
+                setIsDrawingBrick(false);
+                setLastToggledCell(null);
+              }}
+              onPointerCancel={(e) => {
+                e.preventDefault();
+                try {
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                } catch (err) {}
+                setIsDrawingBrick(false);
+                setLastToggledCell(null);
+              }}
             >
               {selectedGlyph?.svg ? (
                 <div
@@ -453,27 +505,6 @@ export default function DrawingCanvas({
                       isActive ? "aktif" : "nonaktif"
                     }`}
                     tabIndex={0}
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      setPreviousBrickGrid(getActiveBrickGrid());
-                      setIsDrawingBrick(true);
-                      toggleBrickCell(rIndex, cIndex);
-                      setLastToggledCell({ r: rIndex, c: cIndex });
-                    }}
-                    onPointerMove={(e) => {
-                      e.preventDefault();
-                      if (isDrawingBrick) {
-                        if (lastToggledCell?.r !== rIndex || lastToggledCell?.c !== cIndex) {
-                          const targetVal = brickTool === "pencil";
-                          toggleBrickCell(rIndex, cIndex, targetVal);
-                          setLastToggledCell({ r: rIndex, c: cIndex });
-                        }
-                      }
-                    }}
-                    onPointerUp={() => {
-                      setIsDrawingBrick(false);
-                      setLastToggledCell(null);
-                    }}
                     onKeyDown={(e) => {
                       if (e.key === " " || e.key === "Enter") {
                         e.preventDefault();
