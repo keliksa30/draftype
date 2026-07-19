@@ -221,7 +221,7 @@ export default function DrawingCanvas({
                   }
                   fontSize="80"
                   fontWeight="bold"
-                  fill="var(--line)"
+                  fill="currentColor"
                   opacity="0.12"
                   style={{ pointerEvents: "none", userSelect: "none" }}
                 >
@@ -404,8 +404,7 @@ export default function DrawingCanvas({
             <div
               className="brick-grid-canvas"
               style={{
-                gridTemplateColumns: `repeat(${getActiveBrickGrid().size}, 1fr)`,
-                gridTemplateRows: `repeat(${getActiveBrickGrid().size}, 1fr)`,
+                display: "block",
                 width: "100%",
                 maxWidth: "460px",
                 margin: "0 auto",
@@ -465,6 +464,44 @@ export default function DrawingCanvas({
                 setLastToggledCell(null);
               }}
             >
+              {/* Template Watermark behind everything */}
+              {templateStyle !== "none" && (
+                <svg
+                  viewBox="0 0 100 100"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    pointerEvents: "none",
+                    zIndex: 1,
+                  }}
+                >
+                  <text
+                    x="50"
+                    y="74"
+                    textAnchor="middle"
+                    fontFamily={
+                      templateStyle === "sans"
+                        ? "sans-serif"
+                        : templateStyle === "serif"
+                        ? "serif"
+                        : templateStyle === "cursive"
+                        ? "cursive"
+                        : "monospace"
+                    }
+                    fontSize="80"
+                    fontWeight="bold"
+                    fill="currentColor"
+                    opacity="0.12"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {activeGlyph}
+                  </text>
+                </svg>
+              )}
+
               {selectedGlyph?.svg ? (
                 <div
                   style={{
@@ -520,26 +557,41 @@ export default function DrawingCanvas({
                 />
               ) : null}
 
-              {getActiveBrickGrid().cells.map((rowArr, rIndex) =>
-                rowArr.map((isActive, cIndex) => (
-                  <div
-                    key={`${rIndex}-${cIndex}`}
-                    className={`brick-cell ${isActive ? "active" : ""}`}
-                    role="button"
-                    aria-label={`Piksel baris ${rIndex + 1} kolom ${cIndex + 1}, ${
-                      isActive ? "aktif" : "nonaktif"
-                    }`}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === " " || e.key === "Enter") {
-                        e.preventDefault();
-                        setPreviousBrickGrid(getActiveBrickGrid());
-                        toggleBrickCell(rIndex, cIndex);
-                      }
-                    }}
-                  />
-                ))
-              )}
+              {/* Isolated CSS Grid cells wrapper */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${getActiveBrickGrid().size}, 1fr)`,
+                  gridTemplateRows: `repeat(${getActiveBrickGrid().size}, 1fr)`,
+                  width: "100%",
+                  height: "100%",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  zIndex: 2,
+                }}
+              >
+                {getActiveBrickGrid().cells.map((rowArr, rIndex) =>
+                  rowArr.map((isActive, cIndex) => (
+                    <div
+                      key={`${rIndex}-${cIndex}`}
+                      className={`brick-cell ${isActive ? "active" : ""}`}
+                      role="button"
+                      aria-label={`Piksel baris ${rIndex + 1} kolom ${cIndex + 1}, ${
+                        isActive ? "aktif" : "nonaktif"
+                      }`}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === " " || e.key === "Enter") {
+                          e.preventDefault();
+                          setPreviousBrickGrid(getActiveBrickGrid());
+                          toggleBrickCell(rIndex, cIndex);
+                        }
+                      }}
+                    />
+                  ))
+                )}
+              </div>
 
               {showGuides && (
                 <div
@@ -550,6 +602,7 @@ export default function DrawingCanvas({
                     width: "100%",
                     height: "100%",
                     pointerEvents: "none",
+                    zIndex: 3,
                   }}
                 >
                   <div
@@ -580,42 +633,6 @@ export default function DrawingCanvas({
                     }}
                   />
                 </div>
-              )}
-              {templateStyle !== "none" && (
-                <svg
-                  viewBox="0 0 100 100"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    pointerEvents: "none",
-                    zIndex: 5,
-                  }}
-                >
-                  <text
-                    x="50"
-                    y="74"
-                    textAnchor="middle"
-                    fontFamily={
-                      templateStyle === "sans"
-                        ? "sans-serif"
-                        : templateStyle === "serif"
-                        ? "serif"
-                        : templateStyle === "cursive"
-                        ? "cursive"
-                        : "monospace"
-                    }
-                    fontSize="80"
-                    fontWeight="bold"
-                    fill="var(--line)"
-                    opacity="0.12"
-                    style={{ pointerEvents: "none", userSelect: "none" }}
-                  >
-                    {activeGlyph}
-                  </text>
-                </svg>
               )}
             </div>
           ) : hasTypeDraft || !selectedGlyph.svg ? (
