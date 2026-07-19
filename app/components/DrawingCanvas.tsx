@@ -1,6 +1,6 @@
 import { PointerEvent, RefObject, useEffect } from "react";
 import { Mode, DrawTool, DrawPoint, GlyphArt, BrickGrid } from "./types";
-import { fingerTools, getToolIcon, getCalligraphyPath, getPointedPath } from "./constants";
+import { fingerTools, getToolIcon, getCalligraphyPath, getPointedPath, pathFromPoints } from "./constants";
 import { useI18n } from "../utils/i18n";
 
 interface DrawingCanvasProps {
@@ -58,11 +58,12 @@ interface DrawingCanvasProps {
 
 const forceSvgToFullPercent = (svgString: string | undefined): string => {
   if (!svgString) return "";
-  // Match the opening <svg> tag and strip existing absolute width/height attributes, forcing them to 100%
+  // Match the opening <svg> tag and strip existing absolute width/height and overflow attributes, forcing them to 100% and visible overflow
   return svgString.replace(/<svg([^>]*)>/i, (match, attrs) => {
     let cleanAttrs = attrs.replace(/\bwidth=["'][^"']*["']/gi, "");
     cleanAttrs = cleanAttrs.replace(/\bheight=["'][^"']*["']/gi, "");
-    return `<svg${cleanAttrs} width="100%" height="100%">`;
+    cleanAttrs = cleanAttrs.replace(/\boverflow=["'][^"']*["']/gi, "");
+    return `<svg${cleanAttrs} width="100%" height="100%" overflow="visible">`;
   });
 };
 
@@ -241,33 +242,24 @@ export default function DrawingCanvas({
               {showOnionSkin && prevGlyphSvg ? (
                 <g
                   opacity={0.16}
-                  style={{
-                    pointerEvents: "none",
-                    transform: `translate(${prevGlyphArt?.x ?? 0}%, ${prevGlyphArt?.y ?? 0}%) rotate(${prevGlyphArt?.rotation ?? 0}deg) scale(${(prevGlyphArt?.scale ?? 100) / 100})`,
-                    transformOrigin: "center",
-                  }}
+                  style={{ pointerEvents: "none" }}
+                  transform={`translate(50, 50) translate(${(prevGlyphArt?.x ?? 0) * 0.714}, ${(prevGlyphArt?.y ?? 0) * 0.714}) rotate(${prevGlyphArt?.rotation ?? 0}) scale(${(prevGlyphArt?.scale ?? 100) / 100}) translate(-50, -50)`}
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(prevGlyphSvg) }}
                 />
               ) : null}
               {showOnionSkin && nextGlyphSvg ? (
                 <g
                   opacity={0.08}
-                  style={{
-                    pointerEvents: "none",
-                    transform: `translate(${nextGlyphArt?.x ?? 0}%, ${nextGlyphArt?.y ?? 0}%) rotate(${nextGlyphArt?.rotation ?? 0}deg) scale(${(nextGlyphArt?.scale ?? 100) / 100})`,
-                    transformOrigin: "center",
-                  }}
+                  style={{ pointerEvents: "none" }}
+                  transform={`translate(50, 50) translate(${(nextGlyphArt?.x ?? 0) * 0.714}, ${(nextGlyphArt?.y ?? 0) * 0.714}) rotate(${nextGlyphArt?.rotation ?? 0}) scale(${(nextGlyphArt?.scale ?? 100) / 100}) translate(-50, -50)`}
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
                 />
               ) : null}
               {selectedGlyph.svg ? (
                 <g
                   opacity={1}
-                  style={{
-                    pointerEvents: "none",
-                    transform: `translate(${selectedGlyph.x ?? 0}%, ${selectedGlyph.y ?? 0}%) rotate(${selectedGlyph.rotation ?? 0}deg) scale(${(selectedGlyph.scale ?? 100) / 100})`,
-                    transformOrigin: "center",
-                  }}
+                  style={{ pointerEvents: "none" }}
+                  transform={`translate(50, 50) translate(${(selectedGlyph.x ?? 0) * 0.714}, ${(selectedGlyph.y ?? 0) * 0.714}) rotate(${selectedGlyph.rotation ?? 0}) scale(${(selectedGlyph.scale ?? 100) / 100}) translate(-50, -50)`}
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(selectedGlyph.svg) }}
                 />
               ) : null}

@@ -155,7 +155,7 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
   let i = 0;
   while (i < tokens.length) {
     let cmd = tokens[i];
-    let args: number[] = [];
+    const args: number[] = [];
     
     if (/^[A-Za-z]$/.test(cmd)) {
       lastCmd = cmd;

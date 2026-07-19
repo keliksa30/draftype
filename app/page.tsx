@@ -566,32 +566,42 @@ function MainApp() {
       // Convert each segment to a path element and scale it
       let appendedPathsSvg = "";
       for (const segment of segments) {
+        // Scale coordinates directly instead of wrapping in a group transform
+        const scaledPoints = segment.points.map((p) => ({
+          ...p,
+          x: p.x * scaleFactor,
+          y: p.y * scaleFactor,
+          cx: p.cx !== undefined ? p.cx * scaleFactor : undefined,
+          cy: p.cy !== undefined ? p.cy * scaleFactor : undefined,
+        }));
+
+        const segmentBrushSize = brushSize * scaleFactor;
         let pathD = "";
         let strokeColor = "currentColor";
         let fillColor = "none";
-        let strokeWidth = brushSize.toString();
+        let strokeWidth = segmentBrushSize.toString();
 
         if (segment.isEraser) {
-          pathD = pathFromPoints(segment.points);
+          pathD = pathFromPoints(scaledPoints);
           strokeColor = "#ffffff"; // White color for subtraction
           fillColor = "none";
-          strokeWidth = brushSize.toString();
+          strokeWidth = segmentBrushSize.toString();
         } else {
           if (penType === "calligraphy") {
-            pathD = getCalligraphyPath(segment.points, brushSize, penAngle);
+            pathD = getCalligraphyPath(scaledPoints, segmentBrushSize, penAngle);
             strokeColor = "currentColor";
             fillColor = "currentColor";
             strokeWidth = "0.2";
           } else if (penType === "pointed") {
-            pathD = getPointedPath(segment.points, brushSize);
+            pathD = getPointedPath(scaledPoints, segmentBrushSize);
             strokeColor = "currentColor";
             fillColor = "currentColor";
             strokeWidth = "0.2";
           } else {
-            pathD = pathFromPoints(segment.points);
+            pathD = pathFromPoints(scaledPoints);
             strokeColor = "currentColor";
             fillColor = drawingFilled ? "currentColor" : "none";
-            strokeWidth = brushSize.toString();
+            strokeWidth = segmentBrushSize.toString();
           }
         }
 
@@ -601,11 +611,7 @@ function MainApp() {
       }
 
       if (appendedPathsSvg) {
-        if (scaleFactor !== 1) {
-          innerContent += `<g transform="scale(${scaleFactor})">${appendedPathsSvg}</g>`;
-        } else {
-          innerContent += appendedPathsSvg;
-        }
+        innerContent += appendedPathsSvg;
       }
     }
 
