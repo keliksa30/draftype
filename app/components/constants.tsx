@@ -292,6 +292,89 @@ export const pointsFromPath = (pathStr: string): DrawPoint[] => {
   return points;
 };
 
+interface TransformMatrix {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+}
+
+const multiplyMatrices = (m1: TransformMatrix, m2: TransformMatrix): TransformMatrix => {
+  return {
+    a: m1.a * m2.a + m1.c * m2.b,
+    b: m1.b * m2.a + m1.d * m2.b,
+    c: m1.a * m2.c + m1.c * m2.d,
+    d: m1.b * m2.c + m1.d * m2.d,
+    e: m1.a * m2.e + m1.c * m2.f + m1.e,
+    f: m1.b * m2.e + m1.d * m2.f + m1.f,
+  };
+};
+
+const getElementTransformMatrix = (el: Element): TransformMatrix => {
+  let currentMatrix: TransformMatrix = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+  const transformAttr = el.getAttribute("transform");
+  if (!transformAttr) return currentMatrix;
+
+  const regex = /(translate|scale|rotate|matrix)\s*\(([^)]+)\)/g;
+  let match;
+  while ((match = regex.exec(transformAttr)) !== null) {
+    const type = match[1];
+    const args = match[2].trim().split(/[\s,]+/).map(Number).filter((n) => !isNaN(n));
+    let stepMatrix: TransformMatrix = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+
+    if (type === "translate") {
+      const tx = args[0] || 0;
+      const ty = args[1] || 0;
+      stepMatrix.e = tx;
+      stepMatrix.f = ty;
+    } else if (type === "scale") {
+      const sx = args[0] ?? 1;
+      const sy = args[1] ?? sx;
+      stepMatrix.a = sx;
+      stepMatrix.d = sy;
+    } else if (type === "rotate") {
+      const angle = ((args[0] || 0) * Math.PI) / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      stepMatrix.a = cos;
+      stepMatrix.b = sin;
+      stepMatrix.c = -sin;
+      stepMatrix.d = cos;
+      if (args.length >= 3) {
+        const cx = args[1];
+        const cy = args[2];
+        const t1: TransformMatrix = { a: 1, b: 0, c: 0, d: 1, e: -cx, f: -cy };
+        const t2: TransformMatrix = { a: 1, b: 0, c: 0, d: 1, e: cx, f: cy };
+        stepMatrix = multiplyMatrices(t2, multiplyMatrices(stepMatrix, t1));
+      }
+    } else if (type === "matrix") {
+      if (args.length >= 6) {
+        stepMatrix.a = args[0];
+        stepMatrix.b = args[1];
+        stepMatrix.c = args[2];
+        stepMatrix.d = args[3];
+        stepMatrix.e = args[4];
+        stepMatrix.f = args[5];
+      }
+    }
+    currentMatrix = multiplyMatrices(currentMatrix, stepMatrix);
+  }
+  return currentMatrix;
+};
+
+const getCumulativeMatrix = (pathEl: Element): TransformMatrix => {
+  let matrix: TransformMatrix = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+  let current: Element | null = pathEl;
+  while (current && current.tagName.toLowerCase() !== "svg") {
+    const elMatrix = getElementTransformMatrix(current);
+    matrix = multiplyMatrices(elMatrix, matrix);
+    current = current.parentElement;
+  }
+  return matrix;
+};
+
 export const pointsFromSvg = (svgString: string): DrawPoint[] => {
   if (typeof window === "undefined") return [];
   const parser = new DOMParser();
@@ -324,16 +407,27 @@ export const pointsFromSvg = (svgString: string): DrawPoint[] => {
     ) {
       return;
     }
-    const x = parseFloat(rect.getAttribute("x") || "0") * scaleX;
-    const y = parseFloat(rect.getAttribute("y") || "0") * scaleY;
-    const w = parseFloat(rect.getAttribute("width") || "0") * scaleX;
-    const h = parseFloat(rect.getAttribute("height") || "0") * scaleY;
-    
-    points.push({ x, y, move: true });
-    points.push({ x: x + w, y, move: false });
-    points.push({ x: x + w, y: y + h, move: false });
-    points.push({ x, y: y + h, move: false });
-    points.push({ x, y, move: false });
+    const matrix = getCumulativeMatrix(rect);
+    const x0 = parseFloat(rect.getAttribute("x") || "0");
+    const y0 = parseFloat(rect.getAttribute("y") || "0");
+    const rw = parseFloat(rect.getAttribute("width") || "0");
+    const rh = parseFloat(rect.getAttribute("height") || "0");
+
+    const tx = (px: number, py: number) => ({
+      x: (matrix.a * px + matrix.c * py + matrix.e) * scaleX,
+      y: (matrix.b * px + matrix.d * py + matrix.f) * scaleY,
+    });
+
+    const p1 = tx(x0, y0);
+    const p2 = tx(x0 + rw, y0);
+    const p3 = tx(x0 + rw, y0 + rh);
+    const p4 = tx(x0, y0 + rh);
+
+    points.push({ ...p1, move: true });
+    points.push({ ...p2, move: false });
+    points.push({ ...p3, move: false });
+    points.push({ ...p4, move: false });
+    points.push({ ...p1, move: false });
   });
 
   const paths = doc.querySelectorAll("path");
@@ -341,7 +435,21 @@ export const pointsFromSvg = (svgString: string): DrawPoint[] => {
     const d = path.getAttribute("d");
     if (d) {
       const parsedPathPoints = pointsFromPath(d);
+      const matrix = getCumulativeMatrix(path);
+
       parsedPathPoints.forEach((pt) => {
+        const rawX = pt.x;
+        const rawY = pt.y;
+        pt.x = matrix.a * rawX + matrix.c * rawY + matrix.e;
+        pt.y = matrix.b * rawX + matrix.d * rawY + matrix.f;
+
+        if (pt.cx !== undefined && pt.cy !== undefined) {
+          const rawCx = pt.cx;
+          const rawCy = pt.cy;
+          pt.cx = matrix.a * rawCx + matrix.c * rawCy + matrix.e;
+          pt.cy = matrix.b * rawCx + matrix.d * rawCy + matrix.f;
+        }
+
         pt.x *= scaleX;
         pt.y *= scaleY;
         if (pt.cx !== undefined) pt.cx *= scaleX;
