@@ -2982,6 +2982,11 @@ function MainApp() {
               t={t}
               templateStyle={templateStyle}
               setTemplateStyle={setTemplateStyle}
+              handleReferenceUpload={handleReferenceUpload}
+              setReferenceImage={(val) => {
+                setReferenceImage(val);
+                if (val === "") setFingerImage("");
+              }}
             />
           )}
           <DarkModeToggle />

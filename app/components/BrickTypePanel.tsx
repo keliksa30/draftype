@@ -18,6 +18,8 @@ interface BrickTypePanelProps {
   t: (key: string) => string;
   templateStyle: "none" | "sans" | "serif" | "cursive";
   setTemplateStyle: (val: "none" | "sans" | "serif" | "cursive") => void;
+  handleReferenceUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  setReferenceImage: (val: string) => void;
 }
 
 export default function BrickTypePanel({
@@ -39,6 +41,8 @@ export default function BrickTypePanel({
   t,
   templateStyle,
   setTemplateStyle,
+  handleReferenceUpload,
+  setReferenceImage,
 }: BrickTypePanelProps) {
   const activeSize = getActiveBrickGrid().size;
 
@@ -48,23 +52,23 @@ export default function BrickTypePanel({
         <p className="kicker">{t("choose_grid_size")}</p>
         <div className="button-split" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
           <button
-            className={`action-button ${activeSize === 8 ? "active teal" : ""}`}
+            className={`action-button ${activeSize === 8 ? "active yellow" : ""}`}
             onClick={() => changeBrickSize(8)}
-            title="8x8"
+            title="8x8 Grid"
           >
             8x8
           </button>
           <button
-            className={`action-button ${activeSize === 16 ? "active teal" : ""}`}
+            className={`action-button ${activeSize === 16 ? "active yellow" : ""}`}
             onClick={() => changeBrickSize(16)}
-            title="16x16"
+            title="16x16 Grid"
           >
             16x16
           </button>
           <button
-            className={`action-button ${activeSize === 32 ? "active teal" : ""}`}
+            className={`action-button ${activeSize === 32 ? "active yellow" : ""}`}
             onClick={() => changeBrickSize(32)}
-            title="32x32"
+            title="32x32 Grid"
           >
             32x32
           </button>
@@ -74,15 +78,13 @@ export default function BrickTypePanel({
           onClick={loadShapeToGrid}
           title={t("convert_to_pixelate")}
           style={{
-            marginTop: "12px",
+            marginTop: "8px",
             width: "100%",
-            minHeight: "46px",
             fontSize: "0.82rem",
             fontWeight: "900",
             textTransform: "uppercase",
             border: "3px solid var(--line)",
             boxShadow: "4px 4px 0 var(--line)",
-            transform: "translate(-2px, -2px)",
           }}
         >
           {t("convert_to_pixelate")}
@@ -155,6 +157,26 @@ export default function BrickTypePanel({
               {style === "none" ? "Off" : style}
             </button>
           ))}
+        </div>
+      </div>
+      {/* Template Image Section */}
+      <div style={{ border: "2px solid var(--line)", padding: "12px", borderRadius: "8px", background: "var(--white)", boxShadow: "3px 3px 0 var(--line)" }}>
+        <p style={{ margin: "0 0 10px", fontSize: "0.75rem", fontWeight: "900", color: "var(--yellow)", letterSpacing: "0.05em" }}>IMAGE GUIDE / OVERLAY</p>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <label className="action-button file-label" style={{ flex: 1, minHeight: "32px", fontSize: "0.7rem", padding: "4px 2px", fontWeight: "900", textTransform: "uppercase", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }} title={t("upload_ref")}>
+            {t("upload_ref")}
+            <input accept="image/*" type="file" onChange={handleReferenceUpload} style={{ display: "none" }} />
+          </label>
+          <button 
+            className="action-button" 
+            onClick={() => {
+              setReferenceImage("");
+            }} 
+            style={{ flex: 1, minHeight: "32px", fontSize: "0.7rem", padding: "4px 2px", fontWeight: "900", textTransform: "uppercase" }}
+            title={t("clear_ref")}
+          >
+            {t("clear_ref")}
+          </button>
         </div>
       </div>
     </div>
