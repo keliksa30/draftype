@@ -366,8 +366,38 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
               const strokeWidth = strokeWidthAttr ? parseFloat(strokeWidthAttr) : 0;
               const halfStroke = strokeWidth / 2;
               
-              minX = Math.min(minX, bbox.x - halfStroke);
-              maxX = Math.max(maxX, bbox.x + bbox.width + halfStroke);
+              // Apply Cumulative Transform Matrix (CTM) to get coordinates in SVG viewport space
+              const ctm = (el as any).getCTM();
+              let elMinX = bbox.x - halfStroke;
+              let elMaxX = bbox.x + bbox.width + halfStroke;
+              
+              if (ctm && typeof svgEl.createSVGPoint === "function") {
+                const pt1 = svgEl.createSVGPoint();
+                pt1.x = bbox.x - halfStroke;
+                pt1.y = bbox.y;
+                const t1 = pt1.matrixTransform(ctm);
+                
+                const pt2 = svgEl.createSVGPoint();
+                pt2.x = bbox.x + bbox.width + halfStroke;
+                pt2.y = bbox.y;
+                const t2 = pt2.matrixTransform(ctm);
+                
+                const pt3 = svgEl.createSVGPoint();
+                pt3.x = bbox.x - halfStroke;
+                pt3.y = bbox.y + bbox.height;
+                const t3 = pt3.matrixTransform(ctm);
+                
+                const pt4 = svgEl.createSVGPoint();
+                pt4.x = bbox.x + bbox.width + halfStroke;
+                pt4.y = bbox.y + bbox.height;
+                const t4 = pt4.matrixTransform(ctm);
+                
+                elMinX = Math.min(t1.x, t2.x, t3.x, t4.x);
+                elMaxX = Math.max(t1.x, t2.x, t3.x, t4.x);
+              }
+              
+              minX = Math.min(minX, elMinX);
+              maxX = Math.max(maxX, elMaxX);
               hasContent = true;
             }
           }
