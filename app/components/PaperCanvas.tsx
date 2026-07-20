@@ -30,7 +30,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   brushSize,
   initialSvg,
   fingerZoom,
-  onModification
+  onModification,
+  penType,
+  penAngle,
+  snapToGrid,
+  gridSnapSize
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scopeRef = useRef<paper.PaperScope | null>(null);
@@ -432,7 +436,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
     tool.activate();
 
-  }, [drawTool, brushSize]); // Removed onModification
+  }, [drawTool, brushSize, penType, penAngle, snapToGrid, gridSnapSize]); // Removed onModification
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 50 }}>
