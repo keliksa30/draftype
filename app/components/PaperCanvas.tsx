@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import paper from 'paper/dist/paper-core';
+import { getCalligraphyPath, getPointedPath } from './constants';
 import { DrawTool } from './types';
 
 interface PaperCanvasProps {
@@ -10,6 +11,10 @@ interface PaperCanvasProps {
   initialSvg?: string;
   fingerZoom: number;
   onModification?: () => void;
+  penType?: "round" | "calligraphy" | "pointed";
+  penAngle?: number;
+  snapToGrid?: boolean;
+  gridSnapSize?: number;
 }
 
 export interface PaperCanvasRef {
@@ -66,8 +71,8 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       if (!scopeRef.current) return '';
       const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
       svgNode.setAttribute('viewBox', '0 0 100 100');
-      svgNode.removeAttribute('width');
-      svgNode.removeAttribute('height');
+      svgNode.setAttribute('width', '100');
+      svgNode.setAttribute('height', '100');
       return svgNode.outerHTML;
     },
     undo: () => {
@@ -158,11 +163,25 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     const tool = new scope.Tool();
     toolRef.current = tool;
 
+    const applySnap = (pt: paper.Point) => {
+      if (snapToGrid && gridSnapSize && scopeRef.current) {
+        return new scopeRef.current.Point(
+          Math.round(pt.x / gridSnapSize) * gridSnapSize,
+          Math.round(pt.y / gridSnapSize) * gridSnapSize
+        );
+      }
+      return pt;
+    };
+
     if (drawTool === "brush") {
       let path: paper.Path | null = null;
+      let rawPoints: { x: number, y: number, move?: boolean }[] = [];
+      
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        const pt = applySnap(event.point);
+        rawPoints = [{ x: pt.x, y: pt.y, move: true }];
         path = new scope.Path({
-          segments: [event.point],
+          segments: [pt],
           strokeColor: 'black',
           strokeWidth: brushSize,
           strokeCap: 'round',
@@ -171,11 +190,23 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         });
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
-        if (path) path.add(event.point);
+        const pt = applySnap(event.point);
+        rawPoints.push({ x: pt.x, y: pt.y });
+        if (path) path.add(pt);
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
         if (path) {
           path.simplify(10);
+          
+          if (penType === "calligraphy" || penType === "pointed") {
+             const svgD = penType === "calligraphy" 
+                ? getCalligraphyPath(rawPoints, brushSize, penAngle || 45)
+                : getPointedPath(rawPoints, brushSize);
+             path.remove();
+             const newPath = new scope.Path(svgD);
+             newPath.fillColor = new paper.Color('black');
+          }
+          
           pushHistory();
           if (onModificationRef.current) onModificationRef.current();
         }
@@ -185,9 +216,10 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let currentSegment: paper.Segment | null = null;
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        const pt = applySnap(event.point);
         if (!path || !path.selected) {
            path = new scope.Path({
-             segments: [event.point],
+             segments: [pt],
              strokeColor: 'black',
              strokeWidth: brushSize,
              strokeCap: 'round',
@@ -196,12 +228,13 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
            });
            currentSegment = path.firstSegment;
         } else {
-           currentSegment = path.add(event.point);
+           currentSegment = path.add(pt);
         }
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        const pt = applySnap(event.point);
         if (currentSegment) {
-          currentSegment.handleOut = event.point.subtract(currentSegment.point);
+          currentSegment.handleOut = pt.subtract(currentSegment.point);
           currentSegment.handleIn = currentSegment.handleOut.multiply(-1);
         }
       };
@@ -273,13 +306,14 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        const pt = applySnap(event.point);
         if (hitSegment) {
           if (hitHandle === 'in') {
-            hitSegment.handleIn = hitSegment.handleIn.add(event.delta);
+            hitSegment.handleIn = pt.subtract(hitSegment.point);
           } else if (hitHandle === 'out') {
-            hitSegment.handleOut = hitSegment.handleOut.add(event.delta);
+            hitSegment.handleOut = pt.subtract(hitSegment.point);
           } else {
-            hitSegment.point = hitSegment.point.add(event.delta);
+            hitSegment.point = pt;
           }
         }
       };
@@ -362,20 +396,21 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let startPoint: paper.Point | null = null;
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
-        startPoint = event.point;
+        startPoint = applySnap(event.point);
         shape = null;
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
         if (!startPoint) return;
         if (shape) shape.remove();
         
-        const rect = new scope.Rectangle(startPoint, event.point);
+        const pt = applySnap(event.point);
+        const rect = new scope.Rectangle(startPoint, pt);
         if (drawTool === "rect") {
           shape = new scope.Shape.Rectangle(rect);
         } else if (drawTool === "ellipse") {
           shape = new scope.Shape.Ellipse(rect);
         } else if (drawTool === "line") {
-          shape = new scope.Path.Line(startPoint, event.point);
+          shape = new scope.Path.Line(startPoint, pt);
         }
         
         if (shape) {

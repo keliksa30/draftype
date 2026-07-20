@@ -315,6 +315,10 @@ export default function DrawingCanvas({
                 brushSize={brushSize}
                 fingerZoom={fingerZoom} 
                 initialSvg={selectedGlyph.svg}
+                penType={penType}
+                penAngle={penAngle}
+                snapToGrid={snapToGrid}
+                gridSnapSize={gridSnapSize}
                 onModification={() => {
                   if (setIsDrawingModified) setIsDrawingModified(true);
                 }}
