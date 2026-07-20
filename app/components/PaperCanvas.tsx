@@ -43,6 +43,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     historyIndexRef.current = nextIndex;
   };
 
+  const onModificationRef = useRef(onModification);
+  useEffect(() => {
+    onModificationRef.current = onModification;
+  }, [onModification]);
+
   const restoreHistory = (svgString: string) => {
     if (!scopeRef.current) return;
     scopeRef.current.project.clear();
@@ -53,13 +58,17 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         applyMatrix: true,
       });
     }
-    if (onModification) onModification();
+    if (onModificationRef.current) onModificationRef.current();
   };
 
   useImperativeHandle(ref, () => ({
     exportSVG: () => {
       if (!scopeRef.current) return '';
-      return scopeRef.current.project.exportSVG({ asString: true }) as string;
+      const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
+      svgNode.setAttribute('viewBox', '0 0 100 100');
+      svgNode.removeAttribute('width');
+      svgNode.removeAttribute('height');
+      return svgNode.outerHTML;
     },
     undo: () => {
       if (historyIndexRef.current > 0) {
@@ -77,7 +86,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       if (!scopeRef.current) return;
       scopeRef.current.project.clear();
       pushHistory();
-      if (onModification) onModification();
+      if (onModificationRef.current) onModificationRef.current();
     },
     setSVG: (svg: string) => {
       if (!scopeRef.current) return;
@@ -95,11 +104,28 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     }
   }));
 
+  const updateView = () => {
+    if (!scopeRef.current || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const baseZoom = rect.width / 100;
+    scopeRef.current.view.zoom = baseZoom * (fingerZoom / 100);
+    scopeRef.current.view.center = new scopeRef.current.Point(50, 50);
+  };
+
+  useEffect(() => {
+    updateView();
+  }, [fingerZoom]);
+
   useEffect(() => {
     if (!canvasRef.current) return;
     const scope = new paper.PaperScope();
     scope.setup(canvasRef.current);
     scopeRef.current = scope;
+    
+    scope.view.onResize = () => {
+      updateView();
+    };
+    updateView();
 
     if (initialSvg) {
       scope.project.importSVG(initialSvg, {
@@ -151,7 +177,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         if (path) {
           path.simplify(10);
           pushHistory();
-          if (onModification) onModification();
+          if (onModificationRef.current) onModificationRef.current();
         }
       };
     } else if (drawTool === "pen") {
@@ -181,7 +207,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
         pushHistory();
-        if (onModification) onModification();
+        if (onModificationRef.current) onModificationRef.current();
       };
     } else if (drawTool === "move") {
       let hitItem: paper.Item | null = null;
@@ -206,7 +232,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       tool.onMouseUp = (event: paper.ToolEvent) => {
         if (hitItem) {
           pushHistory();
-          if (onModification) onModification();
+          if (onModificationRef.current) onModificationRef.current();
         }
       };
     } else if (drawTool === "node") {
@@ -229,7 +255,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
               hitSegment.remove();
               hitSegment = null;
               pushHistory();
-              if (onModification) onModification();
+              if (onModificationRef.current) onModificationRef.current();
             }
           } else if (hitResult.type === 'handle-in') {
             hitSegment = hitResult.segment;
@@ -241,7 +267,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             if (event.count === 2) {
               hitSegment = hitResult.item.insert(hitResult.location.index + 1, event.point);
               pushHistory();
-              if (onModification) onModification();
+              if (onModificationRef.current) onModificationRef.current();
             }
           }
         }
@@ -260,7 +286,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       tool.onMouseUp = (event: paper.ToolEvent) => {
         if (hitSegment || hitHandle) {
           pushHistory();
-          if (onModification) onModification();
+          if (onModificationRef.current) onModificationRef.current();
         }
       };
       tool.onKeyDown = (event: paper.KeyEvent) => {
@@ -269,7 +295,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             hitSegment.remove();
             hitSegment = null;
             pushHistory();
-            if (onModification) onModification();
+            if (onModificationRef.current) onModificationRef.current();
           }
         }
       };
@@ -309,7 +335,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
           eraserPath.remove();
           if (erasedSomething) {
             pushHistory();
-            if (onModification) onModification();
+            if (onModificationRef.current) onModificationRef.current();
           }
         }
       };
@@ -324,7 +350,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
              item.fillColor = new paper.Color('black');
            }
            pushHistory();
-           if (onModification) onModification();
+           if (onModificationRef.current) onModificationRef.current();
         }
       };
     } else if (drawTool === "hand") {
@@ -337,6 +363,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
         startPoint = event.point;
+        shape = null;
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
         if (!startPoint) return;
@@ -363,20 +390,14 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             shape.remove();
           }
           pushHistory();
-          if (onModification) onModification();
+          if (onModificationRef.current) onModificationRef.current();
         }
       };
     }
 
     tool.activate();
 
-  }, [drawTool, brushSize, onModification]);
-
-  useEffect(() => {
-    if (scopeRef.current) {
-      scopeRef.current.view.zoom = fingerZoom / 100;
-    }
-  }, [fingerZoom]);
+  }, [drawTool, brushSize]); // Removed onModification
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 50 }}>

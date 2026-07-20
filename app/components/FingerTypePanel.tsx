@@ -92,8 +92,8 @@ export default function FingerTypePanel({
       <label className="slider-row">
         {t("brush_nib")}
         <input
-          max="18"
-          min="3"
+          max="50"
+          min="1"
           type="range"
           value={brushSize}
           onChange={(event) => setBrushSize(Number(event.target.value))}
