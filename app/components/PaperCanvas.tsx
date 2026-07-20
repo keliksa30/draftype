@@ -233,7 +233,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 50 }}>
       <canvas 
         ref={canvasRef} 
-        style={{ width: '100%', height: '100%', display: 'block', background: 'transparent' }} 
+        style={{ width: '100%', height: '100%', display: 'block', background: 'transparent', touchAction: 'none' }} 
         data-paper-resize="true" 
       />
     </div>
