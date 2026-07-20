@@ -55,5 +55,10 @@ export default defineConfig(async () => {
         config: localBindingConfig,
       }),
     ],
+    build: {
+      rolldownOptions: {
+        external: ['canvas', 'jsdom', 'jsdom/lib/jsdom/living/generated/utils'],
+      }
+    }
   };
 });
