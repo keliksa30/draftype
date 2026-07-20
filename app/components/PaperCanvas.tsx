@@ -17,6 +17,7 @@ export interface PaperCanvasRef {
   undo: () => void;
   redo: () => void;
   clear: () => void;
+  setSVG: (svg: string) => void;
 }
 
 const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
@@ -77,6 +78,20 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       scopeRef.current.project.clear();
       pushHistory();
       if (onModification) onModification();
+    },
+    setSVG: (svg: string) => {
+      if (!scopeRef.current) return;
+      scopeRef.current.project.clear();
+      if (svg) {
+        scopeRef.current.project.importSVG(svg, {
+          insert: true,
+          expandShapes: true,
+          applyMatrix: true,
+        });
+      }
+      historyRef.current = [];
+      historyIndexRef.current = -1;
+      pushHistory();
     }
   }));
 

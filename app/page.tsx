@@ -1699,8 +1699,14 @@ function MainApp() {
   };
 
   const revertFingerPlacement = () => {
-    if (lastPlacedStrokes.length === 0) return;
-    setDrawPoints(lastPlacedStrokes);
+    if (mode === "fingertype" && paperCanvasRef.current) {
+      paperCanvasRef.current.setSVG(previousGlyphSvg);
+      setIsDrawingModified(false);
+    } else {
+      if (lastPlacedStrokes.length === 0) return;
+      setDrawPoints(lastPlacedStrokes);
+    }
+    
     setGlyphMap((current) => {
       const next = { ...current };
       next[activeGlyph] = {
@@ -1743,6 +1749,9 @@ function MainApp() {
       setFileName("");
       setTraceStatus("Canvas cleared");
     } else if (mode === "fingertype") {
+      if (paperCanvasRef.current) {
+        paperCanvasRef.current.clear();
+      }
       setDrawPoints([]);
       setDrawHistory([]);
       setDrawHistoryIndex(-1);
@@ -2140,7 +2149,13 @@ function MainApp() {
     setPreviousGlyphSvg(selectedGlyph?.svg || "");
     setLastPlacedStrokes(drawPoints);
 
-    const svg = generateSvgFromDrawingPoints();
+    let svg = "";
+    if (mode === "fingertype" && paperCanvasRef.current) {
+      svg = paperCanvasRef.current.exportSVG();
+    } else {
+      svg = generateSvgFromDrawingPoints();
+    }
+    
     setWorkingSvg(svg);
     setRevertGlyphMap(glyphMap);
     
@@ -3138,6 +3153,7 @@ function MainApp() {
                 penAngle={penAngle}
                 templateStyle={templateStyle}
                 paperCanvasRef={paperCanvasRef}
+                setIsDrawingModified={setIsDrawingModified}
               />
               <div className={onboardingStep === 3 ? "onboard-highlight" : ""} style={{ width: "100%", display: "flex", flexDirection: "column" }}>
                 <CanvasControls

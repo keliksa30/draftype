@@ -56,6 +56,7 @@ interface DrawingCanvasProps {
   penAngle: number;
   templateStyle?: "none" | "sans" | "serif" | "cursive";
   paperCanvasRef?: RefObject<PaperCanvasRef | null>;
+  setIsDrawingModified?: (val: boolean) => void;
 }
 
 const forceSvgToFullPercent = (svgString: string | undefined): string => {
@@ -121,6 +122,7 @@ export default function DrawingCanvas({
   penAngle,
   templateStyle = "none",
   paperCanvasRef,
+  setIsDrawingModified,
 }: DrawingCanvasProps) {
   const { t } = useI18n();
 
@@ -306,17 +308,17 @@ export default function DrawingCanvas({
               ) : null}
               {/* Old manual drawing segments removed, replaced by PaperCanvas */}
             </svg>
-            <PaperCanvas
-              key={activeGlyph}
-              ref={paperCanvasRef}
-              drawTool={drawTool}
-              brushSize={brushSize}
-              fingerZoom={100} 
-              initialSvg={selectedGlyph.svg}
-              onModification={() => {
-                // optional: sync back to React state if needed immediately
-              }}
-            />
+              <PaperCanvas
+                key={activeGlyph}
+                ref={paperCanvasRef}
+                drawTool={drawTool}
+                brushSize={brushSize}
+                fingerZoom={fingerZoom} 
+                initialSvg={selectedGlyph.svg}
+                onModification={() => {
+                  if (setIsDrawingModified) setIsDrawingModified(true);
+                }}
+              />
             </div>
           ) : mode === "brickType" ? (
             <div
