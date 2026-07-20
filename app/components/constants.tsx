@@ -895,163 +895,98 @@ export const applyAutoNeatMap = (map: Record<string, GlyphArt>): Record<string, 
 };
 
 export const getToolIcon = (id: string): ReactNode => {
+  const svgProps = {
+    viewBox: "0 0 24 24",
+    width: "20",
+    height: "20",
+    strokeWidth: "2",
+    fill: "none",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
   switch (id) {
     case "move":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#3b82f6"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="5 9 2 12 5 15" stroke="#3b82f6" />
-          <polyline points="9 5 12 2 15 5" stroke="#3b82f6" />
-          <polyline points="15 19 12 22 9 19" stroke="#3b82f6" />
-          <polyline points="19 9 22 12 19 15" stroke="#3b82f6" />
-          <line x1="2" y1="12" x2="22" y2="12" stroke="#2563eb" />
-          <line x1="12" y1="2" x2="12" y2="22" stroke="#2563eb" />
-          <circle cx="12" cy="12" r="3" fill="#60a5fa" stroke="#2563eb" />
+        <svg {...svgProps} stroke="#3b82f6">
+          <polyline points="5 9 2 12 5 15" />
+          <polyline points="9 5 12 2 15 5" />
+          <polyline points="15 19 12 22 9 19" />
+          <polyline points="19 9 22 12 19 15" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <line x1="12" y1="2" x2="12" y2="22" />
+        </svg>
+      );
+    case "node":
+      return (
+        <svg {...svgProps} stroke="#8b5cf6">
+          <path d="M12 5l-8 8l8 8l8-8z" />
+          <circle cx="12" cy="5" r="2" fill="#8b5cf6" />
+          <circle cx="4" cy="13" r="2" fill="#fff" />
+          <circle cx="20" cy="13" r="2" fill="#fff" />
+          <circle cx="12" cy="21" r="2" fill="#fff" />
         </svg>
       );
     case "hand":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#ea580c"
-          strokeWidth="2.5"
-          fill="#ffedd5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v5" />
-          <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
-          <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
-          <path d="M6 14a4 4 0 0 0-4-4a2 2 0 0 0-2 2v6a7 7 0 0 0 7 7h3a6 6 0 0 0 6-6V11a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+        <svg {...svgProps} stroke="#ea580c">
+          <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+          <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+          <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
         </svg>
       );
     case "brush":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#ec4899"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M18 3l3 3L8 19H5v-3z" stroke="#ec4899" fill="#fbcfe8" />
-          <path d="M14 7l3 3" stroke="#db2777" />
-          <path d="M5 19c-1.5 1.5-3 1.5-3 1.5s0-1.5 1.5-3" stroke="#db2777" strokeWidth="3" />
-          <circle cx="19.5" cy="4.5" r="2" fill="#ec4899" stroke="none" />
+        <svg {...svgProps} stroke="#ec4899">
+          <path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+          <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
         </svg>
       );
     case "pen":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#0d9488"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 2L2 22h20L12 2z" stroke="#0d9488" fill="#ccfbf1" />
-          <line x1="12" y1="2" x2="12" y2="17" stroke="#0f766e" strokeWidth="3" />
-          <circle cx="12" cy="12" r="2" fill="#0d9488" stroke="none" />
+        <svg {...svgProps} stroke="#0d9488">
+          <path d="M12 19l7-7 3 3-7 7-3-3z" />
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+          <path d="M2 2l7.586 7.586" />
+          <circle cx="11" cy="11" r="2" />
         </svg>
       );
     case "eraser":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#e11d48"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path
-            d="M20 20H7L3 16C2 15 2 13 3 12L13 2C14 1 16 1 17 2L21 6C22 7 22 9 21 10L12 19"
-            stroke="#e11d48"
-            fill="#ffe4e6"
-          />
-          <path d="M17 14L10 7" stroke="#be123c" />
+        <svg {...svgProps} stroke="#e11d48">
+          <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+          <path d="M22 21H7" />
+          <path d="m5 11 9 9" />
         </svg>
       );
     case "fill":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#7c3aed"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 2l10 10-5 5-10-10L12 2z" stroke="#7c3aed" fill="#ede9fe" />
-          <path d="M19 9l-9 9" stroke="#6d28d9" />
-          <path d="M5 12c-2 2-2 5 0 7s5 2 7 0" stroke="#6d28d9" fill="#c084fc" />
+        <svg {...svgProps} stroke="#7c3aed">
+          <path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z" />
+          <path d="m5 2 5 5" />
+          <path d="M2 13h15" />
+          <path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z" />
         </svg>
       );
     case "line":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#059669"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="5" y1="19" x2="19" y2="5" stroke="#059669" strokeWidth="3" />
-          <circle cx="5" cy="19" r="2.5" fill="#34d399" stroke="#059669" />
-          <circle cx="19" cy="5" r="2.5" fill="#34d399" stroke="#059669" />
+        <svg {...svgProps} stroke="#059669">
+          <line x1="5" y1="19" x2="19" y2="5" />
+          <circle cx="5" cy="19" r="2" fill="#fff" />
+          <circle cx="19" cy="5" r="2" fill="#fff" />
         </svg>
       );
     case "rect":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#d97706"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="2" stroke="#d97706" fill="#fef3c7" />
+        <svg {...svgProps} stroke="#d97706">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
         </svg>
       );
     case "ellipse":
       return (
-        <svg
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-          stroke="#2563eb"
-          strokeWidth="2.5"
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <ellipse cx="12" cy="12" rx="9" ry="6" stroke="#2563eb" fill="#dbeafe" />
+        <svg {...svgProps} stroke="#2563eb">
+          <circle cx="12" cy="12" r="10" />
         </svg>
       );
     default:

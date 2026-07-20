@@ -1,5 +1,7 @@
+"use client";
+
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import paper from 'paper';
+import paper from 'paper/dist/paper-core';
 import { DrawTool } from './types';
 
 interface PaperCanvasProps {
@@ -12,6 +14,9 @@ interface PaperCanvasProps {
 
 export interface PaperCanvasRef {
   exportSVG: () => string;
+  undo: () => void;
+  redo: () => void;
+  clear: () => void;
 }
 
 const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
@@ -25,10 +30,53 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   const scopeRef = useRef<paper.PaperScope | null>(null);
   const toolRef = useRef<paper.Tool | null>(null);
 
+  const historyRef = useRef<string[]>([]);
+  const historyIndexRef = useRef<number>(-1);
+
+  const pushHistory = () => {
+    if (!scopeRef.current) return;
+    const currentSVG = scopeRef.current.project.exportSVG({ asString: true }) as string;
+    const nextIndex = historyIndexRef.current + 1;
+    historyRef.current = historyRef.current.slice(0, nextIndex);
+    historyRef.current.push(currentSVG);
+    historyIndexRef.current = nextIndex;
+  };
+
+  const restoreHistory = (svgString: string) => {
+    if (!scopeRef.current) return;
+    scopeRef.current.project.clear();
+    if (svgString) {
+      scopeRef.current.project.importSVG(svgString, {
+        insert: true,
+        expandShapes: true,
+        applyMatrix: true,
+      });
+    }
+    if (onModification) onModification();
+  };
+
   useImperativeHandle(ref, () => ({
     exportSVG: () => {
       if (!scopeRef.current) return '';
       return scopeRef.current.project.exportSVG({ asString: true }) as string;
+    },
+    undo: () => {
+      if (historyIndexRef.current > 0) {
+        historyIndexRef.current--;
+        restoreHistory(historyRef.current[historyIndexRef.current]);
+      }
+    },
+    redo: () => {
+      if (historyIndexRef.current < historyRef.current.length - 1) {
+        historyIndexRef.current++;
+        restoreHistory(historyRef.current[historyIndexRef.current]);
+      }
+    },
+    clear: () => {
+      if (!scopeRef.current) return;
+      scopeRef.current.project.clear();
+      pushHistory();
+      if (onModification) onModification();
     }
   }));
 
@@ -45,6 +93,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         applyMatrix: true,
       });
     }
+    
+    // Initialize history with initial state
+    historyRef.current = [];
+    historyIndexRef.current = -1;
+    pushHistory();
 
     return () => {
       scope.project.clear();
@@ -64,7 +117,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     const tool = new scope.Tool();
     toolRef.current = tool;
 
-    if (drawTool === "brush" || drawTool === "pen") {
+    if (drawTool === "brush") {
       let path: paper.Path | null = null;
       tool.onMouseDown = (event: paper.ToolEvent) => {
         path = new scope.Path({
@@ -82,8 +135,38 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       tool.onMouseUp = (event: paper.ToolEvent) => {
         if (path) {
           path.simplify(10);
+          pushHistory();
           if (onModification) onModification();
         }
+      };
+    } else if (drawTool === "pen") {
+      let path: paper.Path | null = null;
+      let currentSegment: paper.Segment | null = null;
+
+      tool.onMouseDown = (event: paper.ToolEvent) => {
+        if (!path || !path.selected) {
+           path = new scope.Path({
+             segments: [event.point],
+             strokeColor: 'black',
+             strokeWidth: brushSize,
+             strokeCap: 'round',
+             strokeJoin: 'round',
+             fullySelected: true
+           });
+           currentSegment = path.firstSegment;
+        } else {
+           currentSegment = path.add(event.point);
+        }
+      };
+      tool.onMouseDrag = (event: paper.ToolEvent) => {
+        if (currentSegment) {
+          currentSegment.handleOut = event.point.subtract(currentSegment.point);
+          currentSegment.handleIn = currentSegment.handleOut.multiply(-1);
+        }
+      };
+      tool.onMouseUp = (event: paper.ToolEvent) => {
+        pushHistory();
+        if (onModification) onModification();
       };
     } else if (drawTool === "move") {
       let hitItem: paper.Item | null = null;
@@ -103,6 +186,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       tool.onMouseDrag = (event: paper.ToolEvent) => {
         if (hitItem) {
           hitItem.position = hitItem.position.add(event.delta);
+        }
+      };
+      tool.onMouseUp = (event: paper.ToolEvent) => {
+        if (hitItem) {
+          pushHistory();
           if (onModification) onModification();
         }
       };
@@ -122,6 +210,12 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
           if (hitResult.type === 'segment') {
             hitSegment = hitResult.segment;
+            if (event.modifiers.shift || event.count === 2) {
+              hitSegment.remove();
+              hitSegment = null;
+              pushHistory();
+              if (onModification) onModification();
+            }
           } else if (hitResult.type === 'handle-in') {
             hitSegment = hitResult.segment;
             hitHandle = 'in';
@@ -129,7 +223,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             hitSegment = hitResult.segment;
             hitHandle = 'out';
           } else if (hitResult.type === 'stroke' && hitResult.item instanceof scope.Path) {
-            hitSegment = hitResult.item.insert(hitResult.location.index + 1, event.point);
+            if (event.count === 2) {
+              hitSegment = hitResult.item.insert(hitResult.location.index + 1, event.point);
+              pushHistory();
+              if (onModification) onModification();
+            }
           }
         }
       };
@@ -142,12 +240,29 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
           } else {
             hitSegment.point = hitSegment.point.add(event.delta);
           }
+        }
+      };
+      tool.onMouseUp = (event: paper.ToolEvent) => {
+        if (hitSegment || hitHandle) {
+          pushHistory();
           if (onModification) onModification();
+        }
+      };
+      tool.onKeyDown = (event: paper.KeyEvent) => {
+        if (event.key === 'backspace' || event.key === 'delete') {
+          if (hitSegment) {
+            hitSegment.remove();
+            hitSegment = null;
+            pushHistory();
+            if (onModification) onModification();
+          }
         }
       };
     } else if (drawTool === "eraser") {
       let eraserPath: paper.Path | null = null;
+      let erasedSomething = false;
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        erasedSomething = false;
         eraserPath = new scope.Path({
           segments: [event.point],
           strokeColor: 'red',
@@ -168,7 +283,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
                   const result = item.subtract(eraserPath);
                   if (result) {
                     item.replaceWith(result);
-                    if (onModification) onModification();
+                    erasedSomething = true;
                   }
                 } catch (e) {
                   console.error("Boolean sub fail", e);
@@ -177,6 +292,24 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             }
           }
           eraserPath.remove();
+          if (erasedSomething) {
+            pushHistory();
+            if (onModification) onModification();
+          }
+        }
+      };
+    } else if (drawTool === "fill") {
+      tool.onMouseDown = (event: paper.ToolEvent) => {
+        const hitResult = scope.project.hitTest(event.point, { fill: true, stroke: true, tolerance: 8 });
+        if (hitResult && hitResult.item) {
+           const item = hitResult.item;
+           if (item.fillColor && item.fillColor.toCSS(true) === '#000000') {
+             item.fillColor = null as any;
+           } else {
+             item.fillColor = new paper.Color('black');
+           }
+           pushHistory();
+           if (onModification) onModification();
         }
       };
     } else if (drawTool === "hand") {
@@ -209,12 +342,13 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
-        if (shape && onModification) {
+        if (shape) {
           if (shape instanceof scope.Shape) {
-            shape.toPath();
+            const converted = shape.toPath();
             shape.remove();
           }
-          onModification();
+          pushHistory();
+          if (onModification) onModification();
         }
       };
     }

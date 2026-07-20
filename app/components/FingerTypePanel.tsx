@@ -76,7 +76,6 @@ export default function FingerTypePanel({
         <button
           className="action-button"
           onClick={undoDrawing}
-          disabled={drawHistoryIndex < 0}
           title={t("undo_line")}
         >
           {t("undo_line")}
@@ -84,7 +83,6 @@ export default function FingerTypePanel({
         <button
           className="action-button"
           onClick={redoDrawing}
-          disabled={drawHistoryIndex >= drawHistory.length - 1}
           title={t("redo_line")}
         >
           {t("redo_line")}

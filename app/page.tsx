@@ -1331,6 +1331,10 @@ function MainApp() {
   };
 
   const undoDrawing = () => {
+    if (paperCanvasRef.current) {
+      paperCanvasRef.current.undo();
+      return;
+    }
     if (drawHistoryIndex > 0) {
       const nextIndex = drawHistoryIndex - 1;
       setDrawHistoryIndex(nextIndex);
@@ -1344,6 +1348,10 @@ function MainApp() {
   };
 
   const redoDrawing = () => {
+    if (paperCanvasRef.current) {
+      paperCanvasRef.current.redo();
+      return;
+    }
     if (drawHistoryIndex < drawHistory.length - 1) {
       const nextIndex = drawHistoryIndex + 1;
       setDrawHistoryIndex(nextIndex);
@@ -1353,6 +1361,10 @@ function MainApp() {
   };
 
   const clearDrawing = () => {
+    if (paperCanvasRef.current) {
+      paperCanvasRef.current.clear();
+      return;
+    }
     setDrawPoints([]);
     setDrawingFilled(false);
     setNextPenMove(true);
