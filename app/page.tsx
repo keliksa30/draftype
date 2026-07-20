@@ -297,6 +297,7 @@ function MainApp() {
 
   const drawingRef = useRef<SVGSVGElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const paperCanvasRef = useRef<{ exportSVG: () => string } | null>(null);
   const glyphStripRef = useRef<HTMLDivElement | null>(null);
   const panStartRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const moveStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -627,6 +628,10 @@ function MainApp() {
   };
 
   const compileDrawingToSvg = (): string => {
+    if (mode === "fingertype" && paperCanvasRef.current) {
+      const paperSvg = paperCanvasRef.current.exportSVG();
+      if (paperSvg) return paperSvg;
+    }
     return generateSvgFromDrawingPoints();
   };
 
@@ -639,10 +644,11 @@ function MainApp() {
     pushGlobalHistory(`Mode ${mode === "fingertype" ? "FingerType" : mode === "brickType" ? "BrickType" : mode} ➔ ${nextMode === "fingertype" ? "FingerType" : nextMode === "brickType" ? "BrickType" : nextMode}`);
     let currentSvg = workingSvg || selectedGlyph?.svg;
 
-    if (mode === "fingertype" && drawPoints.length > 0) {
+    if (mode === "fingertype" && isDrawingModified) {
       currentSvg = compileDrawingToSvg();
       setWorkingSvg(currentSvg);
       setDrawPoints([]);
+      setIsDrawingModified(false);
     }
 
     if (mode !== "brickType" && currentSvg) {
@@ -3119,6 +3125,7 @@ function MainApp() {
                 penType={penType}
                 penAngle={penAngle}
                 templateStyle={templateStyle}
+                paperCanvasRef={paperCanvasRef}
               />
               <div className={onboardingStep === 3 ? "onboard-highlight" : ""} style={{ width: "100%", display: "flex", flexDirection: "column" }}>
                 <CanvasControls

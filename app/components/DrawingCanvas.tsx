@@ -2,6 +2,7 @@ import { PointerEvent, RefObject, useEffect } from "react";
 import { Mode, DrawTool, DrawPoint, GlyphArt, BrickGrid } from "./types";
 import { fingerTools, getToolIcon, getCalligraphyPath, getPointedPath, pathFromPoints } from "./constants";
 import { useI18n } from "../utils/i18n";
+import PaperCanvas, { PaperCanvasRef } from "./PaperCanvas";
 
 interface DrawingCanvasProps {
   mode: Mode;
@@ -54,6 +55,7 @@ interface DrawingCanvasProps {
   penType: "round" | "calligraphy" | "pointed";
   penAngle: number;
   templateStyle?: "none" | "sans" | "serif" | "cursive";
+  paperCanvasRef?: RefObject<PaperCanvasRef | null>;
 }
 
 const forceSvgToFullPercent = (svgString: string | undefined): string => {
@@ -118,6 +120,7 @@ export default function DrawingCanvas({
   penType,
   penAngle,
   templateStyle = "none",
+  paperCanvasRef,
 }: DrawingCanvasProps) {
   const { t } = useI18n();
 
@@ -180,9 +183,10 @@ export default function DrawingCanvas({
         >
           <span className="stage-label">Glyph {activeGlyph}</span>
           {mode === "fingertype" ? (
+            <div style={{ position: "relative", width: `${fingerZoom}%`, aspectRatio: "1 / 1", margin: "0 auto" }}>
             <svg
               ref={drawingRef}
-              style={{ width: `${fingerZoom}%` }}
+              style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
               viewBox="0 0 100 100"
               onPointerDown={startDrawing}
               onPointerMove={continueDrawing}
@@ -255,14 +259,7 @@ export default function DrawingCanvas({
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
                 />
               ) : null}
-              {selectedGlyph.svg ? (
-                <g
-                  opacity={1}
-                  style={{ pointerEvents: "none" }}
-                  transform={`translate(50, 50) translate(${(selectedGlyph.x ?? 0) * 0.714}, ${(selectedGlyph.y ?? 0) * 0.714}) rotate(${selectedGlyph.rotation ?? 0}) scale(${(selectedGlyph.scale ?? 100) / 100}) translate(-50, -50)`}
-                  dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(selectedGlyph.svg) }}
-                />
-              ) : null}
+              {/* `selectedGlyph.svg` is now handled by PaperCanvas */}
               {showGuides ? (
                 <g className="draw-guides">
                   <line x1="18" y1="0" x2="18" y2="100" strokeDasharray="2,2" />
@@ -307,152 +304,20 @@ export default function DrawingCanvas({
                   preserveAspectRatio="xMidYMid meet"
                 />
               ) : null}
-              {(() => {
-                const segments: { points: DrawPoint[]; isEraser: boolean }[] = [];
-                let currentSeg: DrawPoint[] = [];
-                let currentIsEraser = false;
-
-                for (let i = 0; i < smoothedDrawPoints.length; i++) {
-                  const p = smoothedDrawPoints[i];
-                  const isEraser = !!p.isEraser;
-
-                  if (p.move || isEraser !== currentIsEraser) {
-                    if (currentSeg.length > 0) {
-                      segments.push({ points: currentSeg, isEraser: currentIsEraser });
-                    }
-                    currentSeg = [p];
-                    currentIsEraser = isEraser;
-                  } else {
-                    currentSeg.push(p);
-                  }
-                }
-                if (currentSeg.length > 0) {
-                  segments.push({ points: currentSeg, isEraser: currentIsEraser });
-                }
-
-                return segments.map((seg, idx) => {
-                  if (seg.isEraser) {
-                    const pathD = pathFromPoints(seg.points);
-                    return (
-                      <path
-                        key={`seg-${idx}`}
-                        d={pathD}
-                        stroke="var(--white)"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={brushSize}
-                        fill="none"
-                      />
-                    );
-                  } else {
-                    if (penType === "calligraphy") {
-                      return (
-                        <path
-                          key={`seg-${idx}`}
-                          d={getCalligraphyPath(seg.points, brushSize, penAngle)}
-                          fill="currentColor"
-                          stroke="currentColor"
-                          strokeWidth="0.2"
-                        />
-                      );
-                    } else if (penType === "pointed") {
-                      return (
-                        <path
-                          key={`seg-${idx}`}
-                          d={getPointedPath(seg.points, brushSize)}
-                          fill="currentColor"
-                          stroke="currentColor"
-                          strokeWidth="0.2"
-                        />
-                      );
-                    } else {
-                      const pathD = pathFromPoints(seg.points);
-                      return (
-                        <path
-                          key={`seg-${idx}`}
-                          d={pathD}
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={brushSize}
-                          fill={drawingFilled ? "currentColor" : "none"}
-                        />
-                      );
-                    }
-                  }
-                });
-              })()}
-              <path
-                id="active-stroke-path"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-                style={{ pointerEvents: "none" }}
-              />
-              {drawTool === "pen" && lastPenPoint && penPreviewPoint && !nextPenMove ? (
-                <line
-                  className="pen-preview-line"
-                  x1={lastPenPoint.x}
-                  y1={lastPenPoint.y}
-                  x2={penPreviewPoint.x}
-                  y2={penPreviewPoint.y}
-                />
-              ) : null}
-              {drawTool === "pen"
-                ? smoothedDrawPoints.map((point, index) => (
-                    <circle
-                      className="pen-anchor"
-                      cx={point.x}
-                      cy={point.y}
-                      r="1.8"
-                      key={`${point.x}-${point.y}-${index}`}
-                    />
-                  ))
-                : null}
-
-              {/* Geometric Shape Previews */}
-              {shapeStart && shapePreview && (
-                <>
-                  {drawTool === "line" && (
-                    <line
-                      x1={shapeStart.x}
-                      y1={shapeStart.y}
-                      x2={shapePreview.x}
-                      y2={shapePreview.y}
-                      stroke="currentColor"
-                      strokeWidth={brushSize}
-                      strokeDasharray="2,2"
-                      strokeLinecap="round"
-                    />
-                  )}
-                  {drawTool === "rect" && (
-                    <rect
-                      x={Math.min(shapeStart.x, shapePreview.x)}
-                      y={Math.min(shapeStart.y, shapePreview.y)}
-                      width={Math.abs(shapePreview.x - shapeStart.x)}
-                      height={Math.abs(shapePreview.y - shapeStart.y)}
-                      stroke="currentColor"
-                      strokeWidth={brushSize}
-                      strokeDasharray="2,2"
-                      fill="none"
-                    />
-                  )}
-                  {drawTool === "ellipse" && (
-                    <ellipse
-                      cx={(shapeStart.x + shapePreview.x) / 2}
-                      cy={(shapeStart.y + shapePreview.y) / 2}
-                      rx={Math.abs(shapePreview.x - shapeStart.x) / 2}
-                      ry={Math.abs(shapePreview.y - shapeStart.y) / 2}
-                      stroke="currentColor"
-                      strokeWidth={brushSize}
-                      strokeDasharray="2,2"
-                      fill="none"
-                    />
-                  )}
-                </>
-              )}
+              {/* Old manual drawing segments removed, replaced by PaperCanvas */}
             </svg>
+            <PaperCanvas
+              key={activeGlyph}
+              ref={paperCanvasRef}
+              drawTool={drawTool}
+              brushSize={brushSize}
+              fingerZoom={100} 
+              initialSvg={selectedGlyph.svg}
+              onModification={() => {
+                // optional: sync back to React state if needed immediately
+              }}
+            />
+            </div>
           ) : mode === "brickType" ? (
             <div
               className="brick-grid-canvas"

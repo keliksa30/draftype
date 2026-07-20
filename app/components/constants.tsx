@@ -9,7 +9,7 @@ export const glyphs: string[] = [
 ];
 
 export interface FingerTool {
-  id: "move" | "hand" | "brush" | "pen" | "eraser" | "fill" | "line" | "rect" | "ellipse";
+  id: "move" | "node" | "hand" | "brush" | "pen" | "eraser" | "fill" | "line" | "rect" | "ellipse";
   label: string;
   hint: string;
 }
@@ -19,6 +19,11 @@ export const fingerTools: FingerTool[] = [
     id: "move",
     label: "Pindah",
     hint: "Pindahkan gambar di dalam kotak glyph",
+  },
+  {
+    id: "node",
+    label: "Titik",
+    hint: "Pilih dan geser titik/node pada gambar",
   },
   {
     id: "hand",

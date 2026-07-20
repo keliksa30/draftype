@@ -1,5 +1,5 @@
 export type Mode = "typeTapToe" | "fingertype" | "brickType" | "specimen";
-export type DrawTool = "move" | "hand" | "brush" | "pen" | "eraser" | "fill" | "line" | "rect" | "ellipse";
+export type DrawTool = "move" | "node" | "hand" | "brush" | "pen" | "eraser" | "fill" | "line" | "rect" | "ellipse";
 export type MagicAction =
   | "autotrace"
   | "removeBg"
