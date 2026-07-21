@@ -104,11 +104,42 @@ export const samplePixelGlyph: string = makePixelSvg(
   70
 );
 
-export const cleanSvg = (source: string): string =>
-  source
+export const cleanSvg = (source: string): string => {
+  let cleaned = source
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/\son\w+="[^"]*"/gi, "")
     .replace(/\son\w+='[^']*'/gi, "");
+
+  const vbMatch = cleaned.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  let minX = 0, minY = 0, w = 100, h = 100;
+  
+  if (vbMatch) {
+    minX = parseFloat(vbMatch[1]);
+    minY = parseFloat(vbMatch[2]);
+    w = parseFloat(vbMatch[3]);
+    h = parseFloat(vbMatch[4]);
+  } else {
+    const wMatch = cleaned.match(/<svg[^>]*\bwidth=["']([\d.]+)["']/i);
+    const hMatch = cleaned.match(/<svg[^>]*\bheight=["']([\d.]+)["']/i);
+    if (wMatch && hMatch) {
+      w = parseFloat(wMatch[1]);
+      h = parseFloat(hMatch[1]);
+    }
+  }
+
+  if (w !== 100 || h !== 100 || minX !== 0 || minY !== 0) {
+    const scale = Math.min(80 / w, 80 / h);
+    const tx = (100 - w * scale) / 2 - minX * scale;
+    const ty = (100 - h * scale) / 2 - minY * scale;
+    
+    const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+    if (contentMatch) {
+      cleaned = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+    }
+  }
+
+  return cleaned;
+};
 
 export const smoothPoints = (points: DrawPoint[], strength: number): DrawPoint[] => {
   if (strength <= 0 || points.length < 3) return points;

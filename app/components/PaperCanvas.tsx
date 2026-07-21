@@ -73,7 +73,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   useImperativeHandle(ref, () => ({
     exportSVG: () => {
       if (!scopeRef.current) return '';
-      const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
+      const svgNode = scopeRef.current.project.exportSVG({ 
+        asString: false,
+        bounds: new scopeRef.current.Rectangle(0, 0, 100, 100)
+      }) as SVGElement;
+      svgNode.setAttribute('viewBox', '0 0 100 100');
       svgNode.setAttribute('viewBox', '0 0 100 100');
       svgNode.setAttribute('width', '100');
       svgNode.setAttribute('height', '100');
