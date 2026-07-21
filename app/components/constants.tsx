@@ -141,6 +141,30 @@ export const cleanSvg = (source: string): string => {
   return cleaned;
 };
 
+export const autoFitSvgContent = (svgString: string): string => {
+  const bounds = getGlyphBounds(svgString);
+  if (bounds.isEmpty) return svgString;
+  
+  const contentW = bounds.maxX - bounds.minX;
+  const contentH = bounds.maxY - bounds.minY;
+  
+  if (contentW <= 0 || contentH <= 0) return svgString;
+  
+  // We want to fit this content into an 80x80 box centered in a 100x100 canvas.
+  const scale = Math.min(80 / contentW, 80 / contentH);
+  
+  // Calculate translations to center it.
+  const tx = 50 - (bounds.minX + contentW / 2) * scale;
+  const ty = 50 - (bounds.minY + contentH / 2) * scale;
+  
+  // Wrap the entire content of the SVG inside a transform group
+  const contentMatch = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+  if (contentMatch) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+  }
+  return svgString;
+};
+
 export const smoothPoints = (points: DrawPoint[], strength: number): DrawPoint[] => {
   if (strength <= 0 || points.length < 3) return points;
   const passes = Math.max(1, Math.round(strength / 18));

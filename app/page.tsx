@@ -35,6 +35,7 @@ import {
   makeImageSvg,
   samplePixelGlyph,
   cleanSvg,
+  autoFitSvgContent,
   smoothPoints,
   pathFromPoints,
   pointsFromSvg,
@@ -1018,7 +1019,8 @@ function MainApp() {
 
     if (file.type.includes("svg") || file.name.toLowerCase().endsWith(".svg")) {
       const text = await file.text();
-      const cleaned = cleanSvg(text);
+      let cleaned = cleanSvg(text);
+      cleaned = autoFitSvgContent(cleaned);
       setUploadedImage("");
       setWorkingSvg(cleaned);
       setGlyphMap((current) => applyNewSvgToMap(current, cleaned));
@@ -1270,12 +1272,14 @@ function MainApp() {
         }
       }
 
-      const svg = makePixelSvg(rects, size);
+      let svg = makePixelSvg(rects, size);
+      svg = autoFitSvgContent(svg);
       setWorkingSvg(svg);
       setGlyphMap((current) => applyNewSvgToMap(current, svg));
       setTraceStatus(`Autotraced ${rects.length} pixels`);
     } else {
-      const svg = await runSmoothTrace(result.canvas);
+      let svg = await runSmoothTrace(result.canvas);
+      svg = autoFitSvgContent(svg);
       setWorkingSvg(svg);
       setGlyphMap((current) => applyNewSvgToMap(current, svg));
       const loopsCount = (svg.match(/M/g) || []).length;

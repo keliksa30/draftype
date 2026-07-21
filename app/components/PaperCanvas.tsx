@@ -281,8 +281,19 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let hitHandle: 'in' | 'out' | null = null;
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
-        const hitResult = scope.project.hitTest(event.point, { segments: true, handles: true, stroke: true, tolerance: 8 });
-        scope.project.deselectAll();
+        const hitResult = scope.project.hitTest(event.point, { fill: true, segments: true, handles: true, stroke: true, tolerance: 8 });
+        
+        if (!hitResult) {
+          scope.project.deselectAll();
+          hitSegment = null;
+          hitHandle = null;
+          return;
+        }
+
+        if (!hitResult.item.selected) {
+          scope.project.deselectAll();
+        }
+
         hitSegment = null;
         hitHandle = null;
 
