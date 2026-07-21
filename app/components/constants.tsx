@@ -615,6 +615,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
               const ctm = (el as any).getCTM();
               let elMinX = bbox.x - halfStroke;
               let elMaxX = bbox.x + bbox.width + halfStroke;
+              let elMinY = bbox.y - halfStroke;
+              let elMaxY = bbox.y + bbox.height + halfStroke;
               
               if (ctm && typeof svgEl.createSVGPoint === "function") {
                 const pt1 = svgEl.createSVGPoint();
@@ -639,14 +641,14 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
                 
                 elMinX = Math.min(t1.x, t2.x, t3.x, t4.x);
                 elMaxX = Math.max(t1.x, t2.x, t3.x, t4.x);
-                let elMinY = Math.min(t1.y, t2.y, t3.y, t4.y);
-                let elMaxY = Math.max(t1.y, t2.y, t3.y, t4.y);
+                elMinY = Math.min(t1.y, t2.y, t3.y, t4.y);
+                elMaxY = Math.max(t1.y, t2.y, t3.y, t4.y);
               }
               
               minX = Math.min(minX, elMinX);
               maxX = Math.max(maxX, elMaxX);
-              minY = Math.min(minY, elMinY ?? (bbox.y - halfStroke));
-              maxY = Math.max(maxY, elMaxY ?? (bbox.y + bbox.height + halfStroke));
+              minY = Math.min(minY, elMinY);
+              maxY = Math.max(maxY, elMaxY);
               hasContent = true;
             }
           }

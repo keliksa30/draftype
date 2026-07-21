@@ -42,20 +42,59 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef<number>(-1);
+  const isInternalChangeRef = useRef(false);
 
   const pushHistory = () => {
     if (!scopeRef.current) return;
-    const currentSVG = scopeRef.current.project.exportSVG({ asString: true }) as string;
-    const nextIndex = historyIndexRef.current + 1;
-    historyRef.current = historyRef.current.slice(0, nextIndex);
+    const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
+    svgNode.setAttribute('viewBox', '0 0 100 100');
+    svgNode.setAttribute('width', '100');
+    svgNode.setAttribute('height', '100');
+    const currentSVG = svgNode.outerHTML;
+    
+    // Only push if different from current state
+    if (historyIndexRef.current >= 0 && historyRef.current[historyIndexRef.current] === currentSVG) {
+      return;
+    }
+    
+    // If we're not at the end of history, truncate the future
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    }
+    
     historyRef.current.push(currentSVG);
-    historyIndexRef.current = nextIndex;
+    historyIndexRef.current++;
+    isInternalChangeRef.current = true;
   };
 
   const onModificationRef = useRef(onModification);
   useEffect(() => {
     onModificationRef.current = onModification;
   }, [onModification]);
+
+  useEffect(() => {
+    if (scopeRef.current && initialSvg) {
+      if (isInternalChangeRef.current) {
+        isInternalChangeRef.current = false;
+        return;
+      }
+      
+      const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
+      svgNode.setAttribute('viewBox', '0 0 100 100');
+      svgNode.setAttribute('width', '100');
+      svgNode.setAttribute('height', '100');
+      const currentSVG = svgNode.outerHTML;
+      
+      if (initialSvg !== currentSVG) {
+        scopeRef.current.project.clear();
+        scopeRef.current.project.importSVG(initialSvg, {
+          insert: true,
+          expandShapes: true,
+          applyMatrix: true,
+        });
+      }
+    }
+  }, [initialSvg]);
 
   const restoreHistory = (svgString: string) => {
     if (!scopeRef.current) return;
@@ -67,6 +106,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         applyMatrix: true,
       });
     }
+    isInternalChangeRef.current = true;
     if (onModificationRef.current) onModificationRef.current();
   };
 
@@ -74,10 +114,8 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     exportSVG: () => {
       if (!scopeRef.current) return '';
       const svgNode = scopeRef.current.project.exportSVG({ 
-        asString: false,
-        bounds: new scopeRef.current.Rectangle(0, 0, 100, 100)
+        asString: false
       }) as SVGElement;
-      svgNode.setAttribute('viewBox', '0 0 100 100');
       svgNode.setAttribute('viewBox', '0 0 100 100');
       svgNode.setAttribute('width', '100');
       svgNode.setAttribute('height', '100');
@@ -99,6 +137,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       if (!scopeRef.current) return;
       scopeRef.current.project.clear();
       pushHistory();
+      isInternalChangeRef.current = true;
       if (onModificationRef.current) onModificationRef.current();
     },
     setSVG: (svg: string) => {
