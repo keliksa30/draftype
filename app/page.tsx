@@ -28,6 +28,7 @@ import SpecimenPlayground from "./components/SpecimenPlayground";
 
 // Shared types & utilities
 import { Mode, DrawTool, MagicAction, GlyphArt, DrawPoint, BrickGrid, ConfirmModalState, ClearedGlyphBackup } from "./components/types";
+import { PaperCanvasRef } from "./components/PaperCanvas";
 import {
   glyphs,
   emptyGlyph,
@@ -298,7 +299,7 @@ function MainApp() {
 
   const drawingRef = useRef<SVGSVGElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  const paperCanvasRef = useRef<{ exportSVG: () => string } | null>(null);
+  const paperCanvasRef = useRef<PaperCanvasRef | null>(null);
   const glyphStripRef = useRef<HTMLDivElement | null>(null);
   const panStartRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const moveStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -798,7 +799,7 @@ function MainApp() {
         opttolerance: 0.2,
       });
       if (svg) {
-        return cleanPotraceSvg(svg);
+        return cleanPotraceSvg(svg as string);
       }
       return svg;
     } catch (e) {
@@ -2311,20 +2312,20 @@ function MainApp() {
 
       if (isWhite) {
         path.moveTo(p1.x - nx * r, p1.y - ny * r);
-        path.bezierCurveTo(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
-        path.bezierCurveTo(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
+        path.bezierCurveTo!(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
+        path.bezierCurveTo!(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
         path.lineTo(p2.x + nx * r, p2.y + ny * r);
-        path.bezierCurveTo(p2.x + nx * r + tx * k, p2.y + ty * r - ny * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
-        path.bezierCurveTo(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r + ty * k, p2.x - nx * r, p2.y - ny * r);
+        path.bezierCurveTo!(p2.x + nx * r + tx * k, p2.y + ty * r - ny * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
+        path.bezierCurveTo!(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r + ty * k, p2.x - nx * r, p2.y - ny * r);
         path.lineTo(p1.x - nx * r, p1.y - ny * r);
       } else {
         path.moveTo(p1.x + nx * r, p1.y + ny * r);
         path.lineTo(p2.x + nx * r, p2.y + ny * r);
-        path.bezierCurveTo(p2.x + nx * r + tx * k, p2.y + ny * r + ty * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
-        path.bezierCurveTo(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r + ty * k, p2.x - nx * r, p2.y - ny * r);
+        path.bezierCurveTo!(p2.x + nx * r + tx * k, p2.y + ny * r + ty * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
+        path.bezierCurveTo!(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r + ty * k, p2.x - nx * r, p2.y - ny * r);
         path.lineTo(p1.x - nx * r, p1.y - ny * r);
-        path.bezierCurveTo(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
-        path.bezierCurveTo(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
+        path.bezierCurveTo!(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
+        path.bezierCurveTo!(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
         path.lineTo(p1.x + nx * r, p1.y + ny * r);
       }
       path.close();
@@ -2663,8 +2664,8 @@ function MainApp() {
             const p0 = filteredPts[0];
             const t0 = segTangents[0];
             const n0 = segNormals[0];
-            path.bezierCurveTo(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
-            path.bezierCurveTo(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
+            path.bezierCurveTo!(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
+            path.bezierCurveTo!(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
 
             for (let i = 0; i < nPts - 1; i++) {
               const ptStart = getLeftStart(i);
@@ -2676,8 +2677,8 @@ function MainApp() {
             const pLast = filteredPts[nPts - 1];
             const tLast = segTangents[nPts - 2];
             const nLast = segNormals[nPts - 2];
-            path.bezierCurveTo(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
-            path.bezierCurveTo(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r + tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
+            path.bezierCurveTo!(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
+            path.bezierCurveTo!(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r + tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
 
             for (let i = nPts - 2; i >= 0; i--) {
               const ptEnd = getRightEnd(i);
@@ -2699,8 +2700,8 @@ function MainApp() {
             const pLast = filteredPts[nPts - 1];
             const tLast = segTangents[nPts - 2];
             const nLast = segNormals[nPts - 2];
-            path.bezierCurveTo(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
-            path.bezierCurveTo(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r + tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
+            path.bezierCurveTo!(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
+            path.bezierCurveTo!(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r + tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
 
             for (let i = nPts - 2; i >= 0; i--) {
               const ptEnd = getRightEnd(i);
@@ -2712,8 +2713,8 @@ function MainApp() {
             const p0 = filteredPts[0];
             const t0 = segTangents[0];
             const n0 = segNormals[0];
-            path.bezierCurveTo(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
-            path.bezierCurveTo(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
+            path.bezierCurveTo!(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
+            path.bezierCurveTo!(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
           }
 
           path.close();

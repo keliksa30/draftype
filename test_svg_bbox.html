@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<body>
+<svg id="mysvg" width="100" height="100">
+  <g transform="translate(10, 10) scale(0.5)" id="myg">
+    <path d="M 0 0 L 100 100" stroke="black"/>
+  </g>
+</svg>
+<script>
+  window.onload = function() {
+    var svg = document.getElementById('mysvg');
+    var g = document.getElementById('myg');
+    console.log("SVG BBox:", svg.getBoundingClientRect());
+    console.log("G BBox:", g.getBBox());
+    document.body.innerHTML += "<p>G getBBox: x=" + g.getBBox().x + " y=" + g.getBBox().y + " width=" + g.getBBox().width + "</p>";
+  };
+</script>
+</body>
+</html>

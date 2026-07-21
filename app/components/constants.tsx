@@ -134,12 +134,15 @@ export const cleanSvg = (source: string): string => {
     
     const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
     if (contentMatch) {
-      cleaned = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+      const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+      cleaned = bakeSvgTransforms(rawSvg);
     }
   }
 
   return cleaned;
 };
+
+import { bakeSvgTransforms } from '../utils/bakeSvg';
 
 export const autoFitSvgContent = (svgString: string): string => {
   const bounds = getGlyphBounds(svgString);
@@ -160,7 +163,8 @@ export const autoFitSvgContent = (svgString: string): string => {
   // Wrap the entire content of the SVG inside a transform group
   const contentMatch = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
   if (contentMatch) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+    return bakeSvgTransforms(rawSvg);
   }
   return svgString;
 };

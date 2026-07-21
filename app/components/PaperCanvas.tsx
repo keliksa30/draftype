@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import paper from 'paper/dist/paper-core';
 import { getCalligraphyPath, getPointedPath } from './constants';
-import { DrawTool } from './types';
+import { DrawTool, DrawPoint } from './types';
 
 interface PaperCanvasProps {
   drawTool: DrawTool;
@@ -194,7 +194,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
     return () => {
       scope.project.clear();
-      scope.remove();
+      (scope as any).remove();
       scopeRef.current = null;
     };
   }, []); // Only on mount
@@ -222,7 +222,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
     if (drawTool === "brush") {
       let path: paper.Path | null = null;
-      let rawPoints: { x: number, y: number, move?: boolean }[] = [];
+      let rawPoints: DrawPoint[] = [];
       
       tool.onMouseDown = (event: paper.ToolEvent) => {
         const pt = applySnap(event.point);
@@ -238,7 +238,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
         const pt = applySnap(event.point);
-        rawPoints.push({ x: pt.x, y: pt.y });
+        rawPoints.push({ x: pt.x, y: pt.y, move: false });
         if (path) path.add(pt);
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
@@ -275,7 +275,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
            });
            currentSegment = path.firstSegment;
         } else {
-           currentSegment = path.add(pt);
+           currentSegment = path.add(pt) as paper.Segment;
         }
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
@@ -338,8 +338,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
         if (hitResult) {
           hitResult.item.selected = true;
-          hitResult.item.fullySelected = true;
-
+          (hitResult.item as any).fullySelected = true;
           if (hitResult.type === 'segment') {
             hitSegment = hitResult.segment;
             if (event.modifiers.shift || event.count === 2) {
@@ -356,7 +355,8 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             hitHandle = 'out';
           } else if (hitResult.type === 'stroke' && hitResult.item instanceof scope.Path) {
             if (event.count === 2) {
-              hitSegment = hitResult.item.insert(hitResult.location.index + 1, event.point);
+              hitSegment = hitResult.item.insert(hitResult.location.index + 1, event.point) as paper.Segment;
+              hitSegment.selected = true;
               pushHistory();
               if (onModificationRef.current) onModificationRef.current();
             }
