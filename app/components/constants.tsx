@@ -499,13 +499,15 @@ export const pointsFromSvg = (svgString: string): DrawPoint[] => {
 export interface GlyphBounds {
   minX: number;
   maxX: number;
+  minY: number;
+  maxY: number;
   gridWidth: number;
   gridHeight: number;
   isEmpty: boolean;
 }
 
 export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
-  const fallback: GlyphBounds = { minX: 0, maxX: 16, gridWidth: 16, gridHeight: 16, isEmpty: true };
+  const fallback: GlyphBounds = { minX: 0, maxX: 16, minY: 0, maxY: 16, gridWidth: 16, gridHeight: 16, isEmpty: true };
   if (!svgString || !svgString.trim()) return fallback;
 
   const vbMatch = svgString.match(/viewBox=["']0\s+0\s+([\d.]+)\s+([\d.]+)["']/i);
@@ -530,6 +532,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
         const elements = svgEl.querySelectorAll("rect, path, ellipse, circle, polygon, polyline");
         let minX = Infinity;
         let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
         let hasContent = false;
         
         elements.forEach((el) => {
@@ -560,30 +564,34 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
               if (ctm && typeof svgEl.createSVGPoint === "function") {
                 const pt1 = svgEl.createSVGPoint();
                 pt1.x = bbox.x - halfStroke;
-                pt1.y = bbox.y;
+                pt1.y = bbox.y - halfStroke;
                 const t1 = pt1.matrixTransform(ctm);
                 
                 const pt2 = svgEl.createSVGPoint();
                 pt2.x = bbox.x + bbox.width + halfStroke;
-                pt2.y = bbox.y;
+                pt2.y = bbox.y - halfStroke;
                 const t2 = pt2.matrixTransform(ctm);
                 
                 const pt3 = svgEl.createSVGPoint();
                 pt3.x = bbox.x - halfStroke;
-                pt3.y = bbox.y + bbox.height;
+                pt3.y = bbox.y + bbox.height + halfStroke;
                 const t3 = pt3.matrixTransform(ctm);
                 
                 const pt4 = svgEl.createSVGPoint();
                 pt4.x = bbox.x + bbox.width + halfStroke;
-                pt4.y = bbox.y + bbox.height;
+                pt4.y = bbox.y + bbox.height + halfStroke;
                 const t4 = pt4.matrixTransform(ctm);
                 
                 elMinX = Math.min(t1.x, t2.x, t3.x, t4.x);
                 elMaxX = Math.max(t1.x, t2.x, t3.x, t4.x);
+                let elMinY = Math.min(t1.y, t2.y, t3.y, t4.y);
+                let elMaxY = Math.max(t1.y, t2.y, t3.y, t4.y);
               }
               
               minX = Math.min(minX, elMinX);
               maxX = Math.max(maxX, elMaxX);
+              minY = Math.min(minY, elMinY ?? (bbox.y - halfStroke));
+              maxY = Math.max(maxY, elMaxY ?? (bbox.y + bbox.height + halfStroke));
               hasContent = true;
             }
           }
@@ -592,7 +600,7 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
         document.body.removeChild(container);
         
         if (hasContent) {
-          return { minX, maxX, gridWidth, gridHeight, isEmpty: false };
+          return { minX, maxX, minY, maxY, gridWidth, gridHeight, isEmpty: false };
         }
       }
     } catch (e) {
@@ -603,17 +611,25 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
   // 2. SSR Fallback (Regex-based parser)
   let minX = Infinity;
   let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
 
   // Process rect-based glyphs (for pixel bricks)
   for (const m of svgString.matchAll(/<rect[^>]*?>/g)) {
     const rectStr = m[0];
     const xm = rectStr.match(/\bx=["'](-?[\d.]+)["']/);
+    const ym = rectStr.match(/\by=["'](-?[\d.]+)["']/);
     const wm = rectStr.match(/\bwidth=["']([\d.]+)["']/);
-    if (xm && wm) {
+    const hm = rectStr.match(/\bheight=["']([\d.]+)["']/);
+    if (xm && wm && ym && hm) {
       const x = parseFloat(xm[1]);
+      const y = parseFloat(ym[1]);
       const w = parseFloat(wm[1]);
+      const h = parseFloat(hm[1]);
       minX = Math.min(minX, x);
       maxX = Math.max(maxX, x + w);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y + h);
     }
   }
 
@@ -634,6 +650,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
     let currY = 0;
     let pathMinX = Infinity;
     let pathMaxX = -Infinity;
+    let pathMinY = Infinity;
+    let pathMaxY = -Infinity;
     
     while ((cmdMatch = regex.exec(d)) !== null) {
       const cmd = cmdMatch[1];
@@ -657,6 +675,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           currY = y;
           pathMinX = Math.min(pathMinX, currX);
           pathMaxX = Math.max(pathMaxX, currX);
+          pathMinY = Math.min(pathMinY, currY);
+          pathMaxY = Math.max(pathMaxY, currY);
         }
       } else if (cmdUpper === 'H') {
         const isRelative = cmd === 'h';
@@ -666,6 +686,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           currX = x;
           pathMinX = Math.min(pathMinX, currX);
           pathMaxX = Math.max(pathMaxX, currX);
+          pathMinY = Math.min(pathMinY, currY);
+          pathMaxY = Math.max(pathMaxY, currY);
         }
       } else if (cmdUpper === 'V') {
         const isRelative = cmd === 'v';
@@ -675,6 +697,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           currY = y;
           pathMinX = Math.min(pathMinX, currX);
           pathMaxX = Math.max(pathMaxX, currX);
+          pathMinY = Math.min(pathMinY, currY);
+          pathMaxY = Math.max(pathMaxY, currY);
         }
       } else if (cmdUpper === 'Q') {
         const isRelative = cmd === 'q';
@@ -692,6 +716,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           }
           pathMinX = Math.min(pathMinX, cx, x);
           pathMaxX = Math.max(pathMaxX, cx, x);
+          pathMinY = Math.min(pathMinY, cy, y);
+          pathMaxY = Math.max(pathMaxY, cy, y);
           currX = x;
           currY = y;
         }
@@ -715,6 +741,8 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
           }
           pathMinX = Math.min(pathMinX, cx1, cx2, x);
           pathMaxX = Math.max(pathMaxX, cx1, cx2, x);
+          pathMinY = Math.min(pathMinY, cy1, cy2, y);
+          pathMaxY = Math.max(pathMaxY, cy1, cy2, y);
           currX = x;
           currY = y;
         }
@@ -724,14 +752,16 @@ export const getGlyphBounds = (svgString: string | undefined): GlyphBounds => {
     if (pathMinX !== Infinity && pathMaxX !== -Infinity) {
       minX = Math.min(minX, pathMinX - halfStroke);
       maxX = Math.max(maxX, pathMaxX + halfStroke);
+      minY = Math.min(minY, pathMinY - halfStroke);
+      maxY = Math.max(maxY, pathMaxY + halfStroke);
     }
   }
 
-  if (minX === Infinity || maxX === -Infinity) {
+  if (minX === Infinity || maxX === -Infinity || minY === Infinity || maxY === -Infinity) {
     return fallback;
   }
 
-  return { minX, maxX, gridWidth, gridHeight, isEmpty: false };
+  return { minX, maxX, minY, maxY, gridWidth, gridHeight, isEmpty: false };
 };
 
 export const computeGlyphAdvance = (
@@ -824,62 +854,33 @@ export const applyAutoKerning = (map: Record<string, GlyphArt>): Record<string, 
 };
 
 const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
-  // Detect pixel-art BrickType SVGs by checking for square viewBox (e.g. 8x8, 16x16, 32x32)
-  const viewBoxMatch = art.svg?.match(/viewBox=["']0 0 (\d+) (\d+)["']/i);
-  if (viewBoxMatch) {
-    const vbW = parseInt(viewBoxMatch[1]);
-    const vbH = parseInt(viewBoxMatch[2]);
-    // Square viewBox smaller than 100 indicates pixel-art — use uniform scale for all characters
-    if (vbW === vbH && vbW < 100) {
-      return {
-        ...art,
-        scale: 120,
-        x: 0,
-        y: 0,
-        rotation: 0,
-      };
-    }
+  const bounds = getGlyphBounds(art.svg);
+
+  if (bounds.isEmpty) {
+    return { ...art, scale: 100, x: 0, y: 0, rotation: 0 };
   }
 
-  const isUpper = glyph >= "A" && glyph <= "Z";
-  const isDigit = glyph >= "0" && glyph <= "9";
-  const isLower = glyph >= "a" && glyph <= "z";
-  const isAscender = "bdfhklt".includes(glyph);
+  // The standard baseline is at 74% of the grid height, descent at 88%.
+  const baseline = bounds.gridHeight * 0.74;
+  const descent = bounds.gridHeight * 0.88;
   const isDescender = "gjpqy".includes(glyph);
-  const isFlat = "acemnorsuvwxz".includes(glyph);
-  const isSlim = "ilI1!|.:;()[]{}".includes(glyph);
-  const isWide = "MW@#%&".includes(glyph);
-  let scale = 120;
-  let x = 0;
-  let y = 0;
-  if (isUpper || isDigit) {
-    scale = isSlim ? 116 : isWide ? 130 : 124;
-    x = isSlim ? -3 : isWide ? 1 : 0;
-    y = 0;
-  } else if (isLower) {
-    if (isAscender) {
-      scale = isSlim ? 116 : 122;
-      x = isSlim ? -3 : 0;
-      y = 1;
-    } else if (isDescender) {
-      scale = 114;
-      x = glyph === "j" ? -4 : 0;
-      y = 9;
-    } else if (isFlat) {
-      scale = 105;
-      x = 0;
-      y = 7;
-    }
-  } else {
-    scale = isSlim ? 110 : 118;
-    x = isSlim ? -2 : 0;
-    y = 0;
-  }
+  const targetMaxY = isDescender ? descent : baseline;
+
+  // Calculate how much we need to shift the drawing vertically (in SVG units)
+  const dy = targetMaxY - bounds.maxY;
+
+  // Convert SVG coordinate shift to art.y units.
+  // 1 unit of art.y translates to 5 UPM units.
+  // 1 SVG unit translates to (700 / gridHeight) UPM units.
+  // So dy SVG units = dy * (700 / gridHeight) UPM units.
+  // Therefore art.y = (dy * 700 / gridHeight) / 5 = dy * 140 / gridHeight.
+  const artY = dy * (140 / bounds.gridHeight);
+
   return {
     ...art,
-    scale,
-    x,
-    y,
+    scale: 100, // Do not stretch the user's drawing
+    x: 0,       // Horizontal alignment is handled by spacing/kerning
+    y: Math.round(artY),
     rotation: 0,
   };
 };
