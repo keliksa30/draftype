@@ -932,14 +932,15 @@ function MainApp() {
     const result = await drawImageToCanvas(imgUrl, size);
     if (!result) return;
     const svg = await runSmoothTrace(result.canvas);
+    const fittedSvg = autoFitSvgContent(svg);
 
-    setWorkingSvg(svg);
+    setWorkingSvg(fittedSvg);
     setGlyphMap((current) =>
       applyAutoKerning({
         ...current,
         [activeGlyph]: {
           ...(current[activeGlyph] ?? emptyGlyph()),
-          svg,
+          svg: fittedSvg,
         },
       }),
     );
@@ -2832,7 +2833,8 @@ function MainApp() {
       const size = traceStyle === "pixel" ? 96 : 512;
       const result = await drawImageToCanvas(imgUrl, size);
       if (!result) return null;
-      return await runSmoothTrace(result.canvas);
+      const svg = await runSmoothTrace(result.canvas);
+      return autoFitSvgContent(svg);
     } catch (e) {
       console.error(e);
       return null;

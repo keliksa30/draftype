@@ -1,4 +1,4 @@
-import * as paper from 'paper/dist/paper-core';
+import paper from 'paper/dist/paper-core';
 
 export const bakeSvgTransforms = (svgString: string): string => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
