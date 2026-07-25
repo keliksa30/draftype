@@ -15,9 +15,9 @@ export const bakeSvgTransforms = (svgString: string): string => {
     vbH = vbMatch[4];
   }
 
-  // If paper project is already active, we can bake using the active project directly
+  // If paper project and view are already active, we can bake using the active project directly
   // with insert: false. This is extremely fast and avoids any scope setup/pollution!
-  if (paper.project) {
+  if (paper.project && paper.project.view) {
     try {
       const item = paper.project.importSVG(svgString, {
         insert: false,
