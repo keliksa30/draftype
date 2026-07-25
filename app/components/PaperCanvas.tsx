@@ -88,6 +88,8 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       const normalized = normalizeSvgToCanvas(initialSvg);
       
       if (normalized !== currentSVG) {
+        // Re-activate our scope after normalization (which may have swapped the active scope)
+        scopeRef.current.activate();
         scopeRef.current.project.clear();
         scopeRef.current.project.importSVG(normalized, {
           insert: true,
@@ -159,7 +161,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   }));
 
   const updateView = () => {
-    if (!scopeRef.current || !canvasRef.current) return;
+    if (!scopeRef.current || !canvasRef.current || !scopeRef.current.view) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const baseZoom = rect.width / 100;
     scopeRef.current.view.zoom = baseZoom;
@@ -182,7 +184,12 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     updateView();
 
     if (initialSvg) {
-      scope.project.importSVG(normalizeSvgToCanvas(initialSvg), {
+      // normalizeSvgToCanvas may call bakeSvgTransforms which creates/destroys
+      // its own temporary scope — so do the normalization FIRST, then re-activate
+      // our scope before calling importSVG.
+      const normalized = normalizeSvgToCanvas(initialSvg);
+      scope.activate();
+      scope.project.importSVG(normalized, {
         insert: true,
         expandShapes: true,
         applyMatrix: true,
