@@ -584,20 +584,106 @@ export default function DrawingCanvas({
                 </div>
               )}
             </div>
-          ) : hasTypeDraft || !selectedGlyph.svg ? (
-            <div
-              className="mega-art"
-              style={{ transform: `scale(${typeZoom / 100})` }}
-              dangerouslySetInnerHTML={{ __html: workingSvg }}
-            />
           ) : (
-            <div
-              className="mega-art"
-              style={{
-                transform: `translate(${selectedGlyph.x}px, ${selectedGlyph.y}px) rotate(${selectedGlyph.rotation}deg) scale(${(selectedGlyph.scale / 100) * (typeZoom / 100)})`,
-              }}
-              dangerouslySetInnerHTML={{ __html: selectedGlyph.svg }}
-            />
+            <div style={{ position: "relative", width: `${typeZoom}%`, aspectRatio: "1 / 1", margin: "0 auto" }}>
+              <svg
+                style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
+                viewBox="0 0 100 100"
+                role="img"
+                aria-label="TypeTapToe canvas"
+              >
+                <rect className="draw-bg" width="100" height="100" />
+                {templateStyle !== "none" && (
+                  <text
+                    x="50"
+                    y="74"
+                    textAnchor="middle"
+                    fontFamily={
+                      templateStyle === "sans"
+                        ? "sans-serif"
+                        : templateStyle === "serif"
+                        ? "serif"
+                        : templateStyle === "cursive"
+                        ? "cursive"
+                        : "monospace"
+                    }
+                    fontSize="80"
+                    fontWeight="bold"
+                    fill="var(--ink)"
+                    opacity="0.12"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {activeGlyph}
+                  </text>
+                )}
+                {showOnionSkin && prevGlyphSvg ? (
+                  <g
+                    opacity={0.16}
+                    style={{ pointerEvents: "none" }}
+                    transform={`translate(50, 50) translate(${(prevGlyphArt?.x ?? 0) * 0.714}, ${(prevGlyphArt?.y ?? 0) * 0.714}) rotate(${prevGlyphArt?.rotation ?? 0}) scale(${(prevGlyphArt?.scale ?? 100) / 100}) translate(-50, -50)`}
+                    dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(prevGlyphSvg) }}
+                  />
+                ) : null}
+                {showOnionSkin && nextGlyphSvg ? (
+                  <g
+                    opacity={0.08}
+                    style={{ pointerEvents: "none" }}
+                    transform={`translate(50, 50) translate(${(nextGlyphArt?.x ?? 0) * 0.714}, ${(nextGlyphArt?.y ?? 0) * 0.714}) rotate(${nextGlyphArt?.rotation ?? 0}) scale(${(nextGlyphArt?.scale ?? 100) / 100}) translate(-50, -50)`}
+                    dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
+                  />
+                ) : null}
+
+                {/* THE ACTIVE GLYPH VECTOR */}
+                {(hasTypeDraft || !selectedGlyph.svg) ? (
+                  workingSvg ? (
+                    <g
+                      dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(workingSvg) }}
+                    />
+                  ) : null
+                ) : (
+                  selectedGlyph.svg ? (
+                    <g
+                      transform={`translate(50, 50) translate(${selectedGlyph.x}, ${selectedGlyph.y}) rotate(${selectedGlyph.rotation}) scale(${selectedGlyph.scale / 100}) translate(-50, -50)`}
+                      dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(selectedGlyph.svg) }}
+                    />
+                  ) : null
+                )}
+
+                {showGuides ? (
+                  <g className="draw-guides">
+                    <line x1="18" y1="0" x2="18" y2="100" strokeDasharray="2,2" />
+                    <line x1="82" y1="0" x2="82" y2="100" strokeDasharray="2,2" />
+
+                    {/* CAP HEIGHT */}
+                    <line x1="0" y1="18" x2="100" y2="18" stroke="#ff4136" />
+                    <text x="2" y="16" className="guide-line-text" fill="#ff4136">ASCENT</text>
+
+                    {/* X-HEIGHT */}
+                    <line x1="0" y1="46" x2="100" y2="46" stroke="#b10dc9" strokeDasharray="1,1" />
+                    <text x="2" y="44" className="guide-line-text" fill="#b10dc9">X-HEIGHT</text>
+
+                    {/* BASELINE */}
+                    <line x1="0" y1="74" x2="100" y2="74" stroke="#0074d9" />
+                    <text x="2" y="72" className="guide-line-text" fill="#0074d9">BASELINE</text>
+
+                    {/* DESCENDER */}
+                    <line x1="0" y1="88" x2="100" y2="88" stroke="#0074d9" strokeDasharray="2,2" />
+                    <text x="2" y="86" className="guide-line-text" fill="#0074d9">DESCENT</text>
+                  </g>
+                ) : null}
+                {referenceImage ? (
+                  <image
+                    href={referenceImage}
+                    x="0"
+                    y="0"
+                    width="100"
+                    height="100"
+                    opacity={referenceOpacity / 100}
+                    preserveAspectRatio="xMidYMid meet"
+                  />
+                ) : null}
+              </svg>
+            </div>
           )}
         </div>
       </div>

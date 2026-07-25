@@ -5,6 +5,7 @@ export const bakeSvgTransforms = (svgString: string): string => {
     return svgString;
   }
   
+  const prevProject = paper.project;
   try {
     const canvas = document.createElement('canvas');
     canvas.width = 100;
@@ -34,5 +35,11 @@ export const bakeSvgTransforms = (svgString: string): string => {
   } catch (e) {
     console.error("Failed to bake SVG transforms", e);
     return svgString;
+  } finally {
+    if (prevProject) {
+      try {
+        prevProject.activate();
+      } catch (err) {}
+    }
   }
 };

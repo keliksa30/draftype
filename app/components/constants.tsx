@@ -70,7 +70,7 @@ export const fingerTools: FingerTool[] = [
 export const emptyGlyph = (): GlyphArt => ({
   svg: "",
   rotation: 0,
-  scale: 120,
+  scale: 100,
   x: 0,
   y: 0,
   kerning: 0,
@@ -945,13 +945,17 @@ const kerningForGlyph = (glyph: string): number => {
   return 0;
 };
 
-export const applyAutoKerning = (map: Record<string, GlyphArt>): Record<string, GlyphArt> => {
+export const applyAutoKerning = (
+  map: Record<string, GlyphArt>,
+  forceAll = false,
+): Record<string, GlyphArt> => {
   const next = { ...map };
   const glyphList = Object.keys(next).filter((g) => next[g]?.svg);
 
   glyphList.forEach((glyph) => {
     const item = next[glyph];
     if (!item?.svg) return;
+    if (!forceAll && item.kerning !== 0) return;
 
     const bounds = getGlyphBounds(item.svg);
     if (bounds.isEmpty) {
@@ -994,13 +998,22 @@ const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
   const targetMaxY = isDescender ? descent : baseline;
 
   const dy = targetMaxY - bounds.maxY;
-  const artY = dy * (100 / gridH) * 2;
+
+  // Shift the path directly in SVG coordinates by wrapping inside a <g> transform,
+  // then baking the transform so it is permanently applied to the path points!
+  const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+  let neatSvg = art.svg;
+  if (contentMatch) {
+    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(0, ${dy})">${contentMatch[1]}</g></svg>`;
+    neatSvg = bakeSvgTransforms(rawSvg);
+  }
 
   return {
     ...art,
+    svg: neatSvg,
     scale: 100,
     x: 0,
-    y: Math.round(artY),
+    y: 0, // shift is baked, reset art.y to 0
     rotation: 0,
   };
 };
@@ -1012,7 +1025,7 @@ export const applyAutoNeatMap = (map: Record<string, GlyphArt>): Record<string, 
     if (!item?.svg) return;
     next[glyph] = neatForGlyph(glyph, item);
   });
-  return applyAutoKerning(next);
+  return applyAutoKerning(next, true);
 };
 
 export const getToolIcon = (id: string): ReactNode => {

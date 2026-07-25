@@ -2176,7 +2176,7 @@ function MainApp() {
 
   const autoKern = () => {
     setRevertGlyphMap(glyphMap);
-    const nextGlyphMap = applyAutoKerning(glyphMap);
+    const nextGlyphMap = applyAutoKerning(glyphMap, true);
     setGlyphMap(nextGlyphMap);
     pushGlobalHistory("Auto Kerning Semua Huruf", nextGlyphMap);
   };
