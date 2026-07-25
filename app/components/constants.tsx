@@ -183,7 +183,7 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 100): strin
   }
 
   if (Math.abs(vbW - targetSize) < 0.01 && Math.abs(vbH - targetSize) < 0.01 && Math.abs(vbX) < 0.01 && Math.abs(vbY) < 0.01) {
-    return cleaned;
+    return bakeSvgTransforms(cleaned);
   }
 
   const bounds = getGlyphBounds(cleaned);

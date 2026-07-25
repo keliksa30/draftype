@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import paper from 'paper/dist/paper-core';
 import { getCalligraphyPath, getPointedPath, normalizeSvgToCanvas } from './constants';
+import { bakeSvgTransforms } from '../utils/bakeSvg';
 import { DrawTool, DrawPoint } from './types';
 
 interface PaperCanvasProps {
@@ -121,7 +122,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       svgNode.setAttribute('viewBox', '0 0 100 100');
       svgNode.setAttribute('width', '100');
       svgNode.setAttribute('height', '100');
-      return svgNode.outerHTML;
+      return bakeSvgTransforms(svgNode.outerHTML);
     },
     undo: () => {
       if (historyIndexRef.current > 0) {
@@ -245,7 +246,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
         if (path) {
-          path.simplify(10);
+          path.simplify(0.5);
           
           if (penType === "calligraphy" || penType === "pointed") {
              const svgD = penType === "calligraphy" 
