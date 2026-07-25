@@ -1257,6 +1257,7 @@ html.dark .sidebar-tab:hover {
   padding: 4px 8px;
   font-size: 0.78rem;
   font-weight: 800;
+  z-index: 10;
 }
 
 .glyph-stage b {

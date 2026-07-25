@@ -2183,9 +2183,14 @@ function MainApp() {
 
   const autoNeat = () => {
     setRevertGlyphMap(glyphMap);
-    const nextGlyphMap = applyAutoNeatMap(glyphMap);
+    const item = glyphMap[activeGlyph];
+    if (!item?.svg) return;
+    const nextGlyphMap = {
+      ...glyphMap,
+      [activeGlyph]: applyAutoNeatMap({ [activeGlyph]: item })[activeGlyph]
+    };
     setGlyphMap(nextGlyphMap);
-    pushGlobalHistory("Auto Neat Semua Huruf", nextGlyphMap);
+    pushGlobalHistory(`Auto Neat Huruf ${activeGlyph}`, nextGlyphMap);
   };
 
   const applyTransformsToAll = () => {
