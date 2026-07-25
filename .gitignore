@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.next/
+.wrangler/
+*.log
+.DS_Store
+tsconfig.tsbuildinfo
