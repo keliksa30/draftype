@@ -5,6 +5,16 @@ export const bakeSvgTransforms = (svgString: string): string => {
     return svgString;
   }
 
+  // Extract the viewBox and dimensions from the input SVG to preserve them
+  const vbMatch = svgString.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  let vb = "0 0 100 100";
+  let vbW = "100", vbH = "100";
+  if (vbMatch) {
+    vb = vbMatch[0].replace(/viewBox=["']|["']/g, '');
+    vbW = vbMatch[3];
+    vbH = vbMatch[4];
+  }
+
   // If paper project is already active, we can bake using the active project directly
   // with insert: false. This is extremely fast and avoids any scope setup/pollution!
   if (paper.project) {
@@ -19,15 +29,15 @@ export const bakeSvgTransforms = (svgString: string): string => {
         let result = "";
         if (svgElement.tagName.toLowerCase() !== 'svg') {
           const svgNode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svgNode.setAttribute('viewBox', '0 0 100 100');
-          svgNode.setAttribute('width', '100');
-          svgNode.setAttribute('height', '100');
+          svgNode.setAttribute('viewBox', vb);
+          svgNode.setAttribute('width', vbW);
+          svgNode.setAttribute('height', vbH);
           svgNode.appendChild(svgElement);
           result = svgNode.outerHTML;
         } else {
-          svgElement.setAttribute('viewBox', '0 0 100 100');
-          svgElement.setAttribute('width', '100');
-          svgElement.setAttribute('height', '100');
+          svgElement.setAttribute('viewBox', vb);
+          svgElement.setAttribute('width', vbW);
+          svgElement.setAttribute('height', vbH);
           result = svgElement.outerHTML;
         }
         item.remove();
@@ -46,8 +56,8 @@ export const bakeSvgTransforms = (svgString: string): string => {
   
   try {
     canvas = document.createElement('canvas');
-    canvas.width = 100;
-    canvas.height = 100;
+    canvas.width = parseFloat(vbW);
+    canvas.height = parseFloat(vbH);
     canvas.style.position = 'absolute';
     canvas.style.top = '-9999px';
     canvas.style.left = '-9999px';
@@ -65,9 +75,9 @@ export const bakeSvgTransforms = (svgString: string): string => {
     });
     
     const svgNode = scope.project.exportSVG({ asString: false }) as SVGElement;
-    svgNode.setAttribute('viewBox', '0 0 100 100');
-    svgNode.setAttribute('width', '100');
-    svgNode.setAttribute('height', '100');
+    svgNode.setAttribute('viewBox', vb);
+    svgNode.setAttribute('width', vbW);
+    svgNode.setAttribute('height', vbH);
     
     const result = svgNode.outerHTML;
     

@@ -1004,18 +1004,26 @@ const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
   const gridH = bounds.gridHeight || 100;
   const baseline = gridH * 0.74;
   const descent = gridH * 0.88;
+  const ascent = gridH * 0.18;
+
   const isDescender = "gjpqy".includes(glyph);
   const targetMaxY = isDescender ? descent : baseline;
 
-  const dy = targetMaxY - bounds.maxY;
+  const targetHeight = targetMaxY - ascent;
+  const currentHeight = bounds.maxY - bounds.minY;
 
-  // Shift the path directly in SVG coordinates by wrapping inside a <g> transform,
-  // then baking the transform so it is permanently applied to the path points!
-  const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
   let neatSvg = art.svg;
-  if (contentMatch) {
-    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(0, ${dy})">${contentMatch[1]}</g></svg>`;
-    neatSvg = bakeSvgTransforms(rawSvg);
+  if (currentHeight > 0) {
+    const scaleFactor = targetHeight / currentHeight;
+    const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+    if (contentMatch) {
+      const cx = bounds.minX + (bounds.maxX - bounds.minX) / 2;
+      const cy = bounds.minY + currentHeight / 2;
+      const targetCy = targetMaxY - targetHeight / 2;
+      
+      const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${gridH} ${gridH}"><g transform="translate(${cx}, ${targetCy}) scale(${scaleFactor}) translate(${-cx}, ${-cy})">${contentMatch[1]}</g></svg>`;
+      neatSvg = bakeSvgTransforms(rawSvg);
+    }
   }
 
   return {

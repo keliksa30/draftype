@@ -696,7 +696,7 @@ function MainApp() {
   // ─── Assign Working SVG (TypeTapToe) ─────────────────────────────────────────
 
   const applyNewSvgToMap = (current: Record<string, GlyphArt>, svg: string) => {
-    const normalized = normalizeSvgToCanvas(svg);
+    const normalized = mode === "brickType" ? svg : normalizeSvgToCanvas(svg);
     const updatedGlyph = {
       ...(current[activeGlyph] ?? emptyGlyph()),
       svg: normalized,
