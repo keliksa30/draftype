@@ -173,7 +173,13 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 100): strin
   if (!svgString || !svgString.trim()) return svgString;
   const cleaned = svgString.trim();
 
-  const vbMatch = cleaned.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  // 1. First, bake any existing transforms in the SVG so we get the actual path coordinates!
+  const baked = bakeSvgTransforms(cleaned);
+
+  // 2. Read the actual bounds of the baked paths
+  const bounds = getGlyphBounds(baked);
+
+  const vbMatch = baked.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
   let vbX = 0, vbY = 0, vbW = targetSize, vbH = targetSize;
   if (vbMatch) {
     vbX = parseFloat(vbMatch[1]);
@@ -182,25 +188,29 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 100): strin
     vbH = parseFloat(vbMatch[4]);
   }
 
-  if (Math.abs(vbW - targetSize) < 0.01 && Math.abs(vbH - targetSize) < 0.01 && Math.abs(vbX) < 0.01 && Math.abs(vbY) < 0.01) {
-    return cleaned;
-  }
-
-  const bounds = getGlyphBounds(cleaned);
   const contentW = bounds.isEmpty ? vbW : (bounds.maxX - bounds.minX);
   const contentH = bounds.isEmpty ? vbH : (bounds.maxY - bounds.minY);
   const contentCenterX = bounds.isEmpty ? (vbX + vbW / 2) : (bounds.minX + contentW / 2);
   const contentCenterY = bounds.isEmpty ? (vbY + vbH / 2) : (bounds.minY + contentH / 2);
 
-  if (contentW <= 0 || contentH <= 0) return cleaned;
+  // If content fits well within bounds and the viewBox size is correct, return the baked version as is.
+  // Otherwise (e.g. drawn in 500x500 coordinates but forced into 100x100 viewBox), we scale/center it!
+  const isOutOfBounds = bounds.minX < -5 || bounds.maxX > 105 || bounds.minY < -5 || bounds.maxY > 105;
+  const isSizeMismatch = Math.abs(vbW - targetSize) > 1 || Math.abs(vbH - targetSize) > 1;
 
-  const padding = 0.85;
+  if (!isOutOfBounds && !isSizeMismatch) {
+    return baked;
+  }
+
+  if (contentW <= 0 || contentH <= 0) return baked;
+
+  const padding = 0.82;
   const scale = Math.min((targetSize * padding) / contentW, (targetSize * padding) / contentH);
   const tx = targetSize / 2 - contentCenterX * scale;
   const ty = targetSize / 2 - contentCenterY * scale;
 
-  const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-  if (!contentMatch) return cleaned;
+  const contentMatch = baked.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+  if (!contentMatch) return baked;
 
   const result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetSize} ${targetSize}" fill="none"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
   return bakeSvgTransforms(result);

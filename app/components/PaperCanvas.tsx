@@ -162,7 +162,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     if (!scopeRef.current || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const baseZoom = rect.width / 100;
-    scopeRef.current.view.zoom = baseZoom * (fingerZoom / 100);
+    scopeRef.current.view.zoom = baseZoom;
     scopeRef.current.view.center = new scopeRef.current.Point(50, 50);
   };
 
