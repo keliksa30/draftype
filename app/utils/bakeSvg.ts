@@ -1,45 +1,40 @@
 import paper from 'paper/dist/paper-core';
 
 export const bakeSvgTransforms = (svgString: string): string => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !paper.project) {
     return svgString;
   }
   
-  const prevProject = paper.project;
   try {
-    const canvas = document.createElement('canvas');
-    canvas.width = 100;
-    canvas.height = 100;
-    
-    // Check if we need to setup a new scope or use an existing one
-    // Using a new scope prevents interference with other canvases
-    const scope = new paper.PaperScope();
-    scope.setup(canvas);
-    
-    // Import with applyMatrix: true bakes all transforms directly into the path coordinates
-    scope.project.importSVG(svgString, { 
-      insert: true,
+    // Import using the active project but do not insert into the active layer
+    const item = paper.project.importSVG(svgString, { 
+      insert: false,
       expandShapes: true,
       applyMatrix: true 
     });
     
-    const svgNode = scope.project.exportSVG({ asString: false }) as SVGElement;
-    svgNode.setAttribute('viewBox', '0 0 100 100');
-    svgNode.setAttribute('width', '100');
-    svgNode.setAttribute('height', '100');
+    if (!item) return svgString;
     
-    const result = svgNode.outerHTML;
-    (scope as any).remove(); // Clean up scope
+    const svgElement = item.exportSVG({ asString: false }) as SVGElement;
+    let result = "";
+    if (svgElement.tagName.toLowerCase() !== 'svg') {
+      const svgNode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svgNode.setAttribute('viewBox', '0 0 100 100');
+      svgNode.setAttribute('width', '100');
+      svgNode.setAttribute('height', '100');
+      svgNode.appendChild(svgElement);
+      result = svgNode.outerHTML;
+    } else {
+      svgElement.setAttribute('viewBox', '0 0 100 100');
+      svgElement.setAttribute('width', '100');
+      svgElement.setAttribute('height', '100');
+      result = svgElement.outerHTML;
+    }
     
+    item.remove(); // Clean up item
     return result;
   } catch (e) {
     console.error("Failed to bake SVG transforms", e);
     return svgString;
-  } finally {
-    if (prevProject) {
-      try {
-        prevProject.activate();
-      } catch (err) {}
-    }
   }
 };
