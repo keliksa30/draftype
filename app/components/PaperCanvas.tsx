@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import paper from 'paper/dist/paper-core';
+import type PaperTypes from 'paper';
+// Lazy-load paper to avoid SSR resolution (paper.js requires jsdom on server)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval
+const paper: any = typeof window !== 'undefined' ? eval("require")('paper/dist/paper-core') : null;
 import { getCalligraphyPath, getPointedPath, normalizeSvgToCanvas } from './constants';
 import { DrawTool, DrawPoint } from './types';
 
@@ -95,7 +98,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
           insert: true,
           expandShapes: true,
           applyMatrix: true,
-        });
+        } as any);
       }
     }
   }, [initialSvg]);
@@ -108,7 +111,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         insert: true,
         expandShapes: true,
         applyMatrix: true,
-      });
+      } as any);
     }
     isInternalChangeRef.current = true;
     if (onModificationRef.current) onModificationRef.current();
@@ -152,7 +155,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
           insert: true,
           expandShapes: true,
           applyMatrix: true,
-        });
+        } as any);
       }
       historyRef.current = [];
       historyIndexRef.current = -1;
@@ -193,7 +196,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         insert: true,
         expandShapes: true,
         applyMatrix: true,
-      });
+      } as any);
     }
     
     // Initialize history with initial state
@@ -229,11 +232,19 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       return pt;
     };
 
+    // CRITICAL: Ensure our scope is active before any tool operation.
+    // bakeSvgTransforms creates temporary scopes which can steal the active scope,
+    // causing hitTest coordinates to be wrong (clicking node A edits node B).
+    const ensureActive = () => {
+      if (scopeRef.current) scopeRef.current.activate();
+    };
+
     if (drawTool === "brush") {
       let path: paper.Path | null = null;
       let rawPoints: DrawPoint[] = [];
       
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         const pt = applySnap(event.point);
         rawPoints = [{ x: pt.x, y: pt.y, move: true }];
         path = new scope.Path({
@@ -246,11 +257,13 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         });
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         const pt = applySnap(event.point);
         rawPoints.push({ x: pt.x, y: pt.y, move: false });
         if (path) path.add(pt);
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
+        ensureActive();
         if (path) {
           path.simplify(0.5);
           
@@ -272,6 +285,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let currentSegment: paper.Segment | null = null;
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         const pt = applySnap(event.point);
         if (!path || !path.selected) {
            path = new scope.Path({
@@ -288,6 +302,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         const pt = applySnap(event.point);
         if (currentSegment) {
           currentSegment.handleOut = pt.subtract(currentSegment.point);
@@ -295,12 +310,14 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
+        ensureActive();
         pushHistory();
         if (onModificationRef.current) onModificationRef.current();
       };
     } else if (drawTool === "move") {
       let hitItem: paper.Item | null = null;
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         const hitResult = scope.project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 8 });
         scope.project.deselectAll();
         if (hitResult && hitResult.item) {
@@ -314,11 +331,13 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         if (hitItem) {
           hitItem.position = hitItem.position.add(event.delta);
         }
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
+        ensureActive();
         if (hitItem) {
           pushHistory();
           if (onModificationRef.current) onModificationRef.current();
@@ -332,6 +351,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let didDoubleClickAction = false;
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         didDoubleClickAction = false;
         const now = Date.now();
         const isDoubleClick = (now - lastClickTime < 350) &&
@@ -385,6 +405,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         const pt = applySnap(event.point);
         if (hitSegment) {
           if (hitHandle === 'in') {
@@ -397,6 +418,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
+        ensureActive();
         if (didDoubleClickAction) {
           didDoubleClickAction = false;
           return;
@@ -407,6 +429,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onKeyDown = (event: paper.KeyEvent) => {
+        ensureActive();
         if (event.key === 'backspace' || event.key === 'delete') {
           if (hitSegment) {
             hitSegment.remove();
@@ -420,6 +443,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let eraserPath: paper.Path | null = null;
       let erasedSomething = false;
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         erasedSomething = false;
         eraserPath = new scope.Path({
           segments: [event.point],
@@ -429,9 +453,11 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         });
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         if (eraserPath) eraserPath.add(event.point);
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
+        ensureActive();
         if (eraserPath) {
           const items = scope.project.activeLayer.children.slice();
           for (const item of items) {
@@ -458,6 +484,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       };
     } else if (drawTool === "fill") {
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         const hitResult = scope.project.hitTest(event.point, { fill: true, stroke: true, tolerance: 8 });
         if (hitResult && hitResult.item) {
            const item = hitResult.item;
@@ -472,6 +499,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       };
     } else if (drawTool === "hand") {
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         scope.view.center = scope.view.center.subtract(event.delta);
       };
     } else if (drawTool === "rect" || drawTool === "ellipse" || drawTool === "line") {
@@ -479,10 +507,12 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let startPoint: paper.Point | null = null;
 
       tool.onMouseDown = (event: paper.ToolEvent) => {
+        ensureActive();
         startPoint = applySnap(event.point);
         shape = null;
       };
       tool.onMouseDrag = (event: paper.ToolEvent) => {
+        ensureActive();
         if (!startPoint) return;
         if (shape) shape.remove();
         
@@ -502,6 +532,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
       };
       tool.onMouseUp = (event: paper.ToolEvent) => {
+        ensureActive();
         if (shape) {
           if (shape instanceof scope.Shape) {
             const converted = shape.toPath();

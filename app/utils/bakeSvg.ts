@@ -1,16 +1,34 @@
-import paper from 'paper/dist/paper-core';
-
 /**
  * Bake all SVG transforms into path coordinates using an isolated PaperScope.
- * This function NEVER touches the global paper.project — it always creates
- * its own temporary scope so it cannot crash any active canvas view.
  * 
- * It carefully saves and restores any previously active scope/project.
+ * CRITICAL DESIGN:
+ * - Always creates its own temporary, isolated scope
+ * - Saves a DIRECT REFERENCE to the active project BEFORE creating the temp scope
+ * - Restores the saved project reference AFTER cleanup
+ * - This prevents scope collisions that cause hitTest coordinate mismatches
+ *   (clicking node A edits node B) and view null crashes
+ * - Uses lazy import to avoid SSR issues with paper.js (which requires DOM/canvas)
  */
-export const bakeSvgTransforms = (svgString: string): string => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return svgString;
+
+// Lazy-loaded paper module — only loaded on the client side
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _paper: any = null;
+
+const getPaper = () => {
+  if (typeof window === 'undefined') return null;
+  if (!_paper) {
+    // Use eval-based require to prevent Turbopack from statically analyzing
+    // and bundling paper.js during SSR. Paper.js is purely client-side.
+    // eslint-disable-next-line no-eval
+    _paper = eval("require")('paper/dist/paper-core');
   }
+  return _paper;
+};
+
+export const bakeSvgTransforms = (svgString: string): string => {
+  const paper = getPaper();
+  if (!paper) return svgString; // SSR — return unchanged
+  if (typeof document === 'undefined') return svgString;
   if (!svgString || !svgString.trim()) return svgString;
 
   // Extract the viewBox from the input SVG to preserve dimensions
@@ -23,21 +41,22 @@ export const bakeSvgTransforms = (svgString: string): string => {
     vbH = vbMatch[4];
   }
 
-  // Save the currently active scope and project BEFORE we do anything
-  const savedProject = paper.project;
-  const savedScope = (paper as any).PaperScope?.activeScope ?? null;
+  // Save a DIRECT REFERENCE to the currently active project.
+  // This is far more reliable than saving an index, because indices shift
+  // when projects are added/removed from paper.projects.
+  const savedProject = paper.project ?? null;
 
   let canvas: HTMLCanvasElement | null = null;
-  let scope: paper.PaperScope | null = null;
 
   try {
     canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, parseFloat(vbW));
-    canvas.height = Math.max(1, parseFloat(vbH));
+    canvas.width = Math.max(1, Math.round(parseFloat(vbW)));
+    canvas.height = Math.max(1, Math.round(parseFloat(vbH)));
     canvas.style.cssText = 'position:absolute;top:-9999px;left:-9999px;visibility:hidden;pointer-events:none';
     document.body.appendChild(canvas);
 
-    scope = new paper.PaperScope();
+    // Create isolated scope
+    const scope = new paper.PaperScope();
     scope.setup(canvas);
 
     scope.project.importSVG(svgString, {
@@ -51,29 +70,28 @@ export const bakeSvgTransforms = (svgString: string): string => {
     svgNode.setAttribute('width', vbW);
     svgNode.setAttribute('height', vbH);
 
-    return svgNode.outerHTML;
+    const result = svgNode.outerHTML;
+
+    // Clean up: clear and remove the temporary project+scope
+    scope.project.clear();
+    scope.project.remove();
+
+    return result;
   } catch (e) {
     console.error("bakeSvgTransforms failed:", e);
     return svgString;
   } finally {
-    // Clean up our temporary scope
-    if (scope) {
-      try { scope.project.clear(); } catch (_) {}
-      try { (scope as any).remove(); } catch (_) {}
-    }
     // Remove canvas from DOM
     if (canvas && canvas.parentNode) {
       try { canvas.parentNode.removeChild(canvas); } catch (_) {}
     }
-    // CRITICAL: Restore the previously active scope and project!
-    // When we called scope.setup() it became the active scope.
-    // When we called scope.remove() it may have set paper.project to null.
-    // We must restore the original state.
+    
+    // Restore the previously active project using the saved DIRECT REFERENCE.
+    // After our temp scope was removed, paper.project may point to nothing.
+    // Re-activate the original project so all other code (PaperCanvas, hitTest, etc.) 
+    // continues working correctly.
     if (savedProject) {
       try { savedProject.activate(); } catch (_) {}
-    }
-    if (savedScope && typeof savedScope.activate === 'function') {
-      try { savedScope.activate(); } catch (_) {}
     }
   }
 };

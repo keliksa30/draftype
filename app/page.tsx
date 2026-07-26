@@ -43,6 +43,7 @@ import {
   pointsFromSvg,
   applyAutoKerning,
   applyAutoNeatMap,
+  neatSingleGlyph,
   getGlyphBounds,
   computeGlyphAdvance,
   loadSvgToBrickGrid,
@@ -2157,7 +2158,7 @@ function MainApp() {
       svg = generateSvgFromDrawingPoints();
     }
 
-    svg = normalizeSvgToCanvas(svg);
+    // Don't call normalizeSvgToCanvas here — applyNewSvgToMap already does it
     setWorkingSvg(svg);
     setRevertGlyphMap(glyphMap);
     
@@ -2185,10 +2186,11 @@ function MainApp() {
     setRevertGlyphMap(glyphMap);
     const item = glyphMap[activeGlyph];
     if (!item?.svg) return;
-    const nextGlyphMap = {
+    const neatedGlyph = neatSingleGlyph(activeGlyph, item);
+    const nextGlyphMap = applyAutoKerning({
       ...glyphMap,
-      [activeGlyph]: applyAutoNeatMap({ [activeGlyph]: item })[activeGlyph]
-    };
+      [activeGlyph]: neatedGlyph
+    });
     setGlyphMap(nextGlyphMap);
     pushGlobalHistory(`Auto Neat Huruf ${activeGlyph}`, nextGlyphMap);
   };
