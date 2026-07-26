@@ -1673,11 +1673,18 @@ html.dark .sidebar-tab:hover {
 
 /* Guideline Label Styles */
 .guide-line-text {
-  font-size: 8px;
+  font-size: 14px;
   fill: #888;
-  font-family: sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   user-select: none;
   pointer-events: none;
+}
+
+.draw-guides .guide-line-text {
+  font-size: 40px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
 }
 
 /* Metadata Panel Styles */

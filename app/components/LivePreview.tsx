@@ -42,9 +42,13 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
 
           const bounds = getGlyphBounds(art.svg);
           const viewBox = art.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
-          const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
-          const [, , viewWidth = 100, viewHeight = 100] = viewParts;
-          const scale = ((art.scale ?? 100) / 100) * (700 / Math.max(viewWidth, viewHeight, 1));
+          const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 1000, 1000];
+          const [, , viewWidth = 1000, viewHeight = 1000] = viewParts;
+          
+          const is1000Upm = (viewWidth === 1000 && viewHeight === 1000);
+          const scale = is1000Upm 
+            ? ((art.scale ?? 100) / 100) 
+            : ((art.scale ?? 100) / 100) * (700 / Math.max(viewWidth, viewHeight, 1));
           
           const centerX = viewWidth / 2;
           const centerY = viewHeight / 2;
@@ -60,12 +64,11 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
             .replace(/#000000/gi, "currentColor")
             .replace(/black/gi, "currentColor");
 
-          // Match the UPM baseline offset (790) used in font export for perfect vertical alignment
-          const translateY = 790 - (0.74 * viewHeight) * scale + (art.y ?? 0) * 5;
+          const translateX = is1000Upm ? (art.x ?? 0) * 5 : (150 + xShift + (art.x ?? 0) * 5);
+          const translateY = is1000Upm ? (art.y ?? 0) * 5 : (790 - (0.74 * viewHeight) * scale + (art.y ?? 0) * 5);
 
-          // The SVG uses a 1000x1000 UPM viewBox.
           const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" stroke="currentColor" style="width: 100%; height: 100%; display: block; overflow: visible;">
-            <g fill="currentColor" stroke="currentColor" transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${translateY}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
+            <g fill="currentColor" stroke="currentColor" transform="translate(${translateX}, ${translateY}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
               ${innerContent}
             </g>
           </svg>`;
