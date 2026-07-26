@@ -173,41 +173,29 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 1000): stri
   if (!svgString || !svgString.trim()) return svgString;
   const cleaned = svgString.trim();
 
-  // 1. First bake any existing transforms so we get actual path coordinates.
-  const baked = bakeSvgTransforms(cleaned);
-
-  // 2. Read the actual bounds of the baked paths
-  const bounds = getGlyphBounds(baked);
-
-  // 3. Read the viewBox of the baked SVG
-  const vbMatch = baked.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
-  let vbW = targetSize, vbH = targetSize;
+  // Read viewBox directly from input SVG
+  const vbMatch = cleaned.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  let vbW = targetSize;
+  let vbH = targetSize;
   if (vbMatch) {
     vbW = parseFloat(vbMatch[3]);
     vbH = parseFloat(vbMatch[4]);
   }
 
-  // If viewBox is already targetSize and content fits inside, just ensure the viewBox is set
-  const viewBoxOk = Math.abs(vbW - targetSize) < 1 && Math.abs(vbH - targetSize) < 1;
-  const contentFits = bounds.isEmpty || (
-    bounds.minX >= -50 && bounds.maxX <= targetSize + 50 &&
-    bounds.minY >= -50 && bounds.maxY <= targetSize + 50
-  );
-
-  if (viewBoxOk && contentFits) {
-    return baked.replace(
-      /viewBox=["'][^"']*["']/i,
-      `viewBox="0 0 ${targetSize} ${targetSize}"`
-    );
+  // If already targetSize (1000x1000), return directly to prevent double-scaling
+  if (Math.abs(vbW - targetSize) < 1 && Math.abs(vbH - targetSize) < 1) {
+    if (/viewBox=["'][^"']*["']/i.test(cleaned)) {
+      return cleaned.replace(/viewBox=["'][^"']*["']/i, `viewBox="0 0 ${targetSize} ${targetSize}"`);
+    }
+    return cleaned;
   }
 
-  // Rescale if viewBox is different (e.g. legacy 100x100 to 1000x1000)
-  const scaleX = targetSize / (vbW || 1);
-  const scaleY = targetSize / (vbH || 1);
-  const contentMatch = baked.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-  if (!contentMatch) return baked;
+  // If converting from legacy 100x100 to 1000x1000:
+  const scale = targetSize / (vbW || 1);
+  const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+  if (!contentMatch) return cleaned;
 
-  const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetSize} ${targetSize}"><g transform="scale(${scaleX}, ${scaleY})">${contentMatch[1]}</g></svg>`;
+  const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetSize} ${targetSize}"><g transform="scale(${scale})">${contentMatch[1]}</g></svg>`;
   return bakeSvgTransforms(rawSvg);
 };
 

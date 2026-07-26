@@ -238,10 +238,10 @@ export default function DrawingCanvas({
                       ? "cursive"
                       : "monospace"
                   }
-                  fontSize="800"
+                  fontSize="750"
                   fontWeight="bold"
                   fill="var(--ink)"
-                  opacity="0.12"
+                  opacity="0.30"
                   style={{ pointerEvents: "none", userSelect: "none" }}
                 >
                   {activeGlyph}
@@ -265,24 +265,24 @@ export default function DrawingCanvas({
               ) : null}
               {showGuides ? (
                 <g className="draw-guides">
-                  <line x1="180" y1="0" x2="180" y2="1000" strokeDasharray="20,20" strokeWidth="2" />
-                  <line x1="820" y1="0" x2="820" y2="1000" strokeDasharray="20,20" strokeWidth="2" />
+                  <line x1="180" y1="0" x2="180" y2="1000" strokeDasharray="16,16" strokeWidth="4" />
+                  <line x1="820" y1="0" x2="820" y2="1000" strokeDasharray="16,16" strokeWidth="4" />
 
-                  {/* CAP HEIGHT */}
-                  <line x1="0" y1="180" x2="1000" y2="180" stroke="#ff4136" strokeWidth="2" />
-                  <text x="20" y="160" className="guide-line-text" fill="#ff4136" fontSize="24">ASCENT</text>
+                  {/* CAP HEIGHT / ASCENT */}
+                  <line x1="0" y1="180" x2="1000" y2="180" stroke="#ff4136" strokeWidth="4" />
+                  <text x="24" y="160" className="guide-line-text" fill="#ff4136" fontSize="36" fontWeight="bold">ASCENT</text>
 
                   {/* X-HEIGHT */}
-                  <line x1="0" y1="460" x2="1000" y2="460" stroke="#b10dc9" strokeDasharray="10,10" strokeWidth="2" />
-                  <text x="20" y="440" className="guide-line-text" fill="#b10dc9" fontSize="24">X-HEIGHT</text>
+                  <line x1="0" y1="460" x2="1000" y2="460" stroke="#b10dc9" strokeDasharray="16,16" strokeWidth="4" />
+                  <text x="24" y="440" className="guide-line-text" fill="#b10dc9" fontSize="36" fontWeight="bold">X-HEIGHT</text>
 
                   {/* BASELINE */}
-                  <line x1="0" y1="740" x2="1000" y2="740" stroke="#0074d9" strokeWidth="3" />
-                  <text x="20" y="720" className="guide-line-text" fill="#0074d9" fontSize="24">BASELINE</text>
+                  <line x1="0" y1="740" x2="1000" y2="740" stroke="#0074d9" strokeWidth="6" />
+                  <text x="24" y="716" className="guide-line-text" fill="#0074d9" fontSize="36" fontWeight="bold">BASELINE</text>
 
                   {/* DESCENDER */}
-                  <line x1="0" y1="880" x2="1000" y2="880" stroke="#0074d9" strokeDasharray="20,20" strokeWidth="2" />
-                  <text x="20" y="860" className="guide-line-text" fill="#0074d9" fontSize="24">DESCENT</text>
+                  <line x1="0" y1="880" x2="1000" y2="880" stroke="#0074d9" strokeDasharray="16,16" strokeWidth="4" />
+                  <text x="24" y="856" className="guide-line-text" fill="#0074d9" fontSize="36" fontWeight="bold">DESCENT</text>
                 </g>
               ) : null}
               {referenceImage ? (

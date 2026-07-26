@@ -52,15 +52,20 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
           const contentMatch = art.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
           let innerContent = contentMatch ? contentMatch[1] : "";
           
-          innerContent = innerContent.replace(/#000000/gi, "currentColor").replace(/black/gi, "currentColor");
+          innerContent = innerContent
+            .replace(/fill=["']#000000["']/gi, 'fill="currentColor"')
+            .replace(/fill=["']black["']/gi, 'fill="currentColor"')
+            .replace(/stroke=["']#000000["']/gi, 'stroke="currentColor"')
+            .replace(/stroke=["']black["']/gi, 'stroke="currentColor"')
+            .replace(/#000000/gi, "currentColor")
+            .replace(/black/gi, "currentColor");
 
           // Match the UPM baseline offset (790) used in font export for perfect vertical alignment
           const translateY = 790 - (0.74 * viewHeight) * scale + (art.y ?? 0) * 5;
 
           // The SVG uses a 1000x1000 UPM viewBox.
-          // Inside it, we translate and scale the original SVG paths using the exact OTF/TTF mapping.
-          const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="none" style="width: 100%; height: 100%; display: block; overflow: visible;">
-            <g transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${translateY}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
+          const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" stroke="currentColor" style="width: 100%; height: 100%; display: block; overflow: visible;">
+            <g fill="currentColor" stroke="currentColor" transform="translate(${150 + xShift + (art.x ?? 0) * 5}, ${translateY}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">
               ${innerContent}
             </g>
           </svg>`;

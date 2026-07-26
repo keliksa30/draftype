@@ -17,8 +17,8 @@ export const bakeSvgTransforms = (svgString: string): string => {
 
   // Extract the viewBox from the input SVG to preserve dimensions
   const vbMatch = svgString.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
-  let vb = "0 0 100 100";
-  let vbW = "100", vbH = "100";
+  let vb = "0 0 1000 1000";
+  let vbW = "1000", vbH = "1000";
   if (vbMatch) {
     vb = `${vbMatch[1]} ${vbMatch[2]} ${vbMatch[3]} ${vbMatch[4]}`;
     vbW = vbMatch[3];
