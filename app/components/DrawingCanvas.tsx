@@ -57,6 +57,7 @@ interface DrawingCanvasProps {
   templateStyle?: "none" | "sans" | "serif" | "cursive";
   paperCanvasRef?: RefObject<PaperCanvasRef | null>;
   setIsDrawingModified?: (val: boolean) => void;
+  onFingerCanvasModification?: () => void;
 }
 
 const forceSvgToFullPercent = (svgString: string | undefined): string => {
@@ -123,6 +124,7 @@ export default function DrawingCanvas({
   templateStyle = "none",
   paperCanvasRef,
   setIsDrawingModified,
+  onFingerCanvasModification,
 }: DrawingCanvasProps) {
   const { t } = useI18n();
 
@@ -189,7 +191,7 @@ export default function DrawingCanvas({
             <svg
               ref={drawingRef}
               style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }}
-              viewBox="0 0 100 100"
+              viewBox="0 0 1000 1000"
               onPointerDown={startDrawing}
               onPointerMove={continueDrawing}
               onPointerUp={finishDrawing}
@@ -212,20 +214,20 @@ export default function DrawingCanvas({
                       d={`M ${gridSnapSize} 0 L 0 0 0 ${gridSnapSize}`}
                       fill="none"
                       stroke="var(--line)"
-                      strokeWidth="0.15"
+                      strokeWidth="1.5"
                       opacity="0.1"
                     />
                   </pattern>
                 )}
               </defs>
-              <rect className="draw-bg" width="100" height="100" />
+              <rect className="draw-bg" width="1000" height="1000" />
               {snapToGrid && (
-                <rect width="100" height="100" fill="url(#grid-snap-pattern)" style={{ pointerEvents: "none" }} />
+                <rect width="1000" height="1000" fill="url(#grid-snap-pattern)" style={{ pointerEvents: "none" }} />
               )}
               {templateStyle !== "none" && (
                 <text
-                  x="50"
-                  y="74"
+                  x="500"
+                  y="740"
                   textAnchor="middle"
                   fontFamily={
                     templateStyle === "sans"
@@ -236,7 +238,7 @@ export default function DrawingCanvas({
                       ? "cursive"
                       : "monospace"
                   }
-                  fontSize="80"
+                  fontSize="800"
                   fontWeight="bold"
                   fill="var(--ink)"
                   opacity="0.12"
@@ -249,7 +251,7 @@ export default function DrawingCanvas({
                 <g
                   opacity={0.16}
                   style={{ pointerEvents: "none" }}
-                  transform={`translate(50, 50) translate(${(prevGlyphArt?.x ?? 0) * 0.714}, ${(prevGlyphArt?.y ?? 0) * 0.714}) rotate(${prevGlyphArt?.rotation ?? 0}) scale(${(prevGlyphArt?.scale ?? 100) / 100}) translate(-50, -50)`}
+                  transform={`translate(500, 500) translate(${(prevGlyphArt?.x ?? 0) * 7.14}, ${(prevGlyphArt?.y ?? 0) * 7.14}) rotate(${prevGlyphArt?.rotation ?? 0}) scale(${(prevGlyphArt?.scale ?? 100) / 100}) translate(-500, -500)`}
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(prevGlyphSvg) }}
                 />
               ) : null}
@@ -257,31 +259,30 @@ export default function DrawingCanvas({
                 <g
                   opacity={0.08}
                   style={{ pointerEvents: "none" }}
-                  transform={`translate(50, 50) translate(${(nextGlyphArt?.x ?? 0) * 0.714}, ${(nextGlyphArt?.y ?? 0) * 0.714}) rotate(${nextGlyphArt?.rotation ?? 0}) scale(${(nextGlyphArt?.scale ?? 100) / 100}) translate(-50, -50)`}
+                  transform={`translate(500, 500) translate(${(nextGlyphArt?.x ?? 0) * 7.14}, ${(nextGlyphArt?.y ?? 0) * 7.14}) rotate(${nextGlyphArt?.rotation ?? 0}) scale(${(nextGlyphArt?.scale ?? 100) / 100}) translate(-500, -500)`}
                   dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(nextGlyphSvg) }}
                 />
               ) : null}
-              {/* `selectedGlyph.svg` is now handled by PaperCanvas */}
               {showGuides ? (
                 <g className="draw-guides">
-                  <line x1="18" y1="0" x2="18" y2="100" strokeDasharray="2,2" />
-                  <line x1="82" y1="0" x2="82" y2="100" strokeDasharray="2,2" />
+                  <line x1="180" y1="0" x2="180" y2="1000" strokeDasharray="20,20" strokeWidth="2" />
+                  <line x1="820" y1="0" x2="820" y2="1000" strokeDasharray="20,20" strokeWidth="2" />
 
                   {/* CAP HEIGHT */}
-                  <line x1="0" y1="18" x2="100" y2="18" stroke="#ff4136" />
-                  <text x="2" y="16" className="guide-line-text" fill="#ff4136">ASCENT</text>
+                  <line x1="0" y1="180" x2="1000" y2="180" stroke="#ff4136" strokeWidth="2" />
+                  <text x="20" y="160" className="guide-line-text" fill="#ff4136" fontSize="24">ASCENT</text>
 
                   {/* X-HEIGHT */}
-                  <line x1="0" y1="46" x2="100" y2="46" stroke="#b10dc9" strokeDasharray="1,1" />
-                  <text x="2" y="44" className="guide-line-text" fill="#b10dc9">X-HEIGHT</text>
+                  <line x1="0" y1="460" x2="1000" y2="460" stroke="#b10dc9" strokeDasharray="10,10" strokeWidth="2" />
+                  <text x="20" y="440" className="guide-line-text" fill="#b10dc9" fontSize="24">X-HEIGHT</text>
 
                   {/* BASELINE */}
-                  <line x1="0" y1="74" x2="100" y2="74" stroke="#0074d9" />
-                  <text x="2" y="72" className="guide-line-text" fill="#0074d9">BASELINE</text>
+                  <line x1="0" y1="740" x2="1000" y2="740" stroke="#0074d9" strokeWidth="3" />
+                  <text x="20" y="720" className="guide-line-text" fill="#0074d9" fontSize="24">BASELINE</text>
 
                   {/* DESCENDER */}
-                  <line x1="0" y1="88" x2="100" y2="88" stroke="#0074d9" strokeDasharray="2,2" />
-                  <text x="2" y="86" className="guide-line-text" fill="#0074d9">DESCENT</text>
+                  <line x1="0" y1="880" x2="1000" y2="880" stroke="#0074d9" strokeDasharray="20,20" strokeWidth="2" />
+                  <text x="20" y="860" className="guide-line-text" fill="#0074d9" fontSize="24">DESCENT</text>
                 </g>
               ) : null}
               {referenceImage ? (
@@ -289,8 +290,8 @@ export default function DrawingCanvas({
                   href={referenceImage}
                   x="0"
                   y="0"
-                  width="100"
-                  height="100"
+                  width="1000"
+                  height="1000"
                   opacity={referenceOpacity / 100}
                   preserveAspectRatio="xMidYMid meet"
                 />
@@ -300,13 +301,12 @@ export default function DrawingCanvas({
                   href={fingerImage}
                   x="0"
                   y="0"
-                  width="100"
-                  height="100"
+                  width="1000"
+                  height="1000"
                   className="finger-image-layer"
                   preserveAspectRatio="xMidYMid meet"
                 />
               ) : null}
-              {/* Old manual drawing segments removed, replaced by PaperCanvas */}
             </svg>
               <PaperCanvas
                 key={activeGlyph}
@@ -321,6 +321,7 @@ export default function DrawingCanvas({
                 gridSnapSize={gridSnapSize}
                 onModification={() => {
                   if (setIsDrawingModified) setIsDrawingModified(true);
+                  if (onFingerCanvasModification) onFingerCanvasModification();
                 }}
               />
             </div>

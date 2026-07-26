@@ -2173,6 +2173,23 @@ function MainApp() {
     setIsDrawingModified(false);
   };
 
+  const handleFingerCanvasModification = () => {
+    setIsDrawingModified(true);
+    if (paperCanvasRef.current) {
+      const exportedSvg = paperCanvasRef.current.exportSVG();
+      if (exportedSvg) {
+        setWorkingSvg(exportedSvg);
+        setGlyphMap((current) => applyAutoKerning({
+          ...current,
+          [activeGlyph]: {
+            ...(current[activeGlyph] ?? emptyGlyph()),
+            svg: exportedSvg,
+          },
+        }));
+      }
+    }
+  };
+
   // ─── Auto Edit ───────────────────────────────────────────────────────────────
 
   const autoKern = () => {
@@ -2184,7 +2201,7 @@ function MainApp() {
 
   const autoNeat = () => {
     setRevertGlyphMap(glyphMap);
-    const item = glyphMap[activeGlyph];
+    const item = glyphMap[activeGlyph] ?? emptyGlyph();
     if (!item?.svg) return;
     const neatedGlyph = neatSingleGlyph(activeGlyph, item);
     const nextGlyphMap = applyAutoKerning({
@@ -2192,6 +2209,10 @@ function MainApp() {
       [activeGlyph]: neatedGlyph
     });
     setGlyphMap(nextGlyphMap);
+    setWorkingSvg(neatedGlyph.svg);
+    if (paperCanvasRef.current && neatedGlyph.svg) {
+      paperCanvasRef.current.setSVG(neatedGlyph.svg);
+    }
     pushGlobalHistory(`Auto Neat Huruf ${activeGlyph}`, nextGlyphMap);
   };
 
@@ -3164,6 +3185,7 @@ function MainApp() {
                 templateStyle={templateStyle}
                 paperCanvasRef={paperCanvasRef}
                 setIsDrawingModified={setIsDrawingModified}
+                onFingerCanvasModification={handleFingerCanvasModification}
               />
               <div className={onboardingStep === 3 ? "onboard-highlight" : ""} style={{ width: "100%", display: "flex", flexDirection: "column" }}>
                 <CanvasControls

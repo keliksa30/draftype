@@ -47,9 +47,9 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   const pushHistory = () => {
     if (!scopeRef.current) return;
     const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
-    svgNode.setAttribute('viewBox', '0 0 100 100');
-    svgNode.setAttribute('width', '100');
-    svgNode.setAttribute('height', '100');
+    svgNode.setAttribute('viewBox', '0 0 1000 1000');
+    svgNode.setAttribute('width', '1000');
+    svgNode.setAttribute('height', '1000');
     const currentSVG = svgNode.outerHTML;
     
     // Only push if different from current state
@@ -65,6 +65,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     historyRef.current.push(currentSVG);
     historyIndexRef.current++;
     isInternalChangeRef.current = true;
+    if (onModificationRef.current) onModificationRef.current();
   };
 
   const onModificationRef = useRef(onModification);
@@ -80,15 +81,14 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       }
       
       const svgNode = scopeRef.current.project.exportSVG({ asString: false }) as SVGElement;
-      svgNode.setAttribute('viewBox', '0 0 100 100');
-      svgNode.setAttribute('width', '100');
-      svgNode.setAttribute('height', '100');
+      svgNode.setAttribute('viewBox', '0 0 1000 1000');
+      svgNode.setAttribute('width', '1000');
+      svgNode.setAttribute('height', '1000');
       const currentSVG = svgNode.outerHTML;
 
-      const normalized = normalizeSvgToCanvas(initialSvg);
+      const normalized = normalizeSvgToCanvas(initialSvg, 1000);
       
       if (normalized !== currentSVG) {
-        // Re-activate our scope after normalization (which may have swapped the active scope)
         scopeRef.current.activate();
         scopeRef.current.project.clear();
         scopeRef.current.project.importSVG(normalized, {
@@ -120,9 +120,9 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       const svgNode = scopeRef.current.project.exportSVG({ 
         asString: false
       }) as SVGElement;
-      svgNode.setAttribute('viewBox', '0 0 100 100');
-      svgNode.setAttribute('width', '100');
-      svgNode.setAttribute('height', '100');
+      svgNode.setAttribute('viewBox', '0 0 1000 1000');
+      svgNode.setAttribute('width', '1000');
+      svgNode.setAttribute('height', '1000');
       return svgNode.outerHTML;
     },
     undo: () => {
@@ -148,7 +148,8 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       if (!scopeRef.current) return;
       scopeRef.current.project.clear();
       if (svg) {
-        scopeRef.current.project.importSVG(svg, {
+        const normalized = normalizeSvgToCanvas(svg, 1000);
+        scopeRef.current.project.importSVG(normalized, {
           insert: true,
           expandShapes: true,
           applyMatrix: true,
@@ -163,9 +164,9 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   const updateView = () => {
     if (!scopeRef.current || !canvasRef.current || !scopeRef.current.view) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const baseZoom = rect.width / 100;
+    const baseZoom = rect.width / 1000;
     scopeRef.current.view.zoom = baseZoom;
-    scopeRef.current.view.center = new scopeRef.current.Point(50, 50);
+    scopeRef.current.view.center = new scopeRef.current.Point(500, 500);
   };
 
   useEffect(() => {
@@ -309,7 +310,8 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       let hitItem: paper.Item | null = null;
       tool.onMouseDown = (event: paper.ToolEvent) => {
         ensureActive();
-        const hitResult = scope.project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 8 });
+        const hitTolerance = Math.max(12, 16 / (scope.view.zoom || 1));
+        const hitResult = scope.project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: hitTolerance });
         scope.project.deselectAll();
         if (hitResult && hitResult.item) {
           hitItem = hitResult.item;
@@ -331,7 +333,6 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         ensureActive();
         if (hitItem) {
           pushHistory();
-          if (onModificationRef.current) onModificationRef.current();
         }
       };
     } else if (drawTool === "node") {
@@ -345,13 +346,23 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         ensureActive();
         didDoubleClickAction = false;
         const now = Date.now();
+        const hitTolerance = Math.max(12, 18 / (scope.view.zoom || 1));
+        const doubleClickDist = Math.max(15, 25 / (scope.view.zoom || 1));
+
         const isDoubleClick = (now - lastClickTime < 350) &&
           lastClickPoint &&
-          event.point.getDistance(lastClickPoint) < 8;
+          event.point.getDistance(lastClickPoint) < doubleClickDist;
         lastClickTime = now;
         lastClickPoint = event.point.clone();
 
-        const hitResult = scope.project.hitTest(event.point, { fill: true, segments: true, handles: true, stroke: true, tolerance: 8 });
+        // Hit test priority: segments > handles > stroke > fill
+        const hitResult = scope.project.hitTest(event.point, {
+          segments: true,
+          handles: true,
+          stroke: true,
+          fill: true,
+          tolerance: hitTolerance
+        });
 
         if (!hitResult) {
           scope.project.deselectAll();
@@ -377,7 +388,6 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             hitSegment = null;
             didDoubleClickAction = true;
             pushHistory();
-            if (onModificationRef.current) onModificationRef.current();
           }
         } else if (hitResult.type === 'handle-in') {
           hitSegment = hitResult.segment;
@@ -391,7 +401,6 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             hitSegment.selected = true;
             didDoubleClickAction = true;
             pushHistory();
-            if (onModificationRef.current) onModificationRef.current();
           }
         }
       };
@@ -416,7 +425,6 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         }
         if (hitSegment || hitHandle) {
           pushHistory();
-          if (onModificationRef.current) onModificationRef.current();
         }
       };
       tool.onKeyDown = (event: paper.KeyEvent) => {
@@ -426,7 +434,6 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
             hitSegment.remove();
             hitSegment = null;
             pushHistory();
-            if (onModificationRef.current) onModificationRef.current();
           }
         }
       };

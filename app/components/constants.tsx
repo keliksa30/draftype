@@ -169,12 +169,11 @@ export const autoFitSvgContent = (svgString: string): string => {
   return svgString;
 };
 
-export const normalizeSvgToCanvas = (svgString: string, targetSize = 100): string => {
+export const normalizeSvgToCanvas = (svgString: string, targetSize = 1000): string => {
   if (!svgString || !svgString.trim()) return svgString;
   const cleaned = svgString.trim();
 
   // 1. First bake any existing transforms so we get actual path coordinates.
-  //    This is the ONLY bake call — we avoid double-baking.
   const baked = bakeSvgTransforms(cleaned);
 
   // 2. Read the actual bounds of the baked paths
@@ -191,42 +190,25 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 100): strin
   // If viewBox is already targetSize and content fits inside, just ensure the viewBox is set
   const viewBoxOk = Math.abs(vbW - targetSize) < 1 && Math.abs(vbH - targetSize) < 1;
   const contentFits = bounds.isEmpty || (
-    bounds.minX >= -5 && bounds.maxX <= targetSize + 5 &&
-    bounds.minY >= -5 && bounds.maxY <= targetSize + 5
+    bounds.minX >= -50 && bounds.maxX <= targetSize + 50 &&
+    bounds.minY >= -50 && bounds.maxY <= targetSize + 50
   );
 
   if (viewBoxOk && contentFits) {
-    // Just ensure viewBox is exactly "0 0 100 100"
     return baked.replace(
       /viewBox=["'][^"']*["']/i,
       `viewBox="0 0 ${targetSize} ${targetSize}"`
     );
   }
 
-  // Content doesn't fit or viewBox is wrong — we need to rescale.
-  // Since we already baked transforms above, the path coordinates are raw.
-  // We just need to wrap them in a transform group and set the correct viewBox.
-  // NO second bake needed — the transform group will be baked by PaperCanvas
-  // when it does importSVG (which applies matrices automatically).
-  const contentW = bounds.isEmpty ? vbW : (bounds.maxX - bounds.minX);
-  const contentH = bounds.isEmpty ? vbH : (bounds.maxY - bounds.minY);
-  if (contentW <= 0 || contentH <= 0) return baked;
-
-  const contentCenterX = bounds.isEmpty ? vbW / 2 : (bounds.minX + contentW / 2);
-  const contentCenterY = bounds.isEmpty ? vbH / 2 : (bounds.minY + contentH / 2);
-
-  // Scale to fit within 82% of target (leaving 9% margin on each side)
-  const padding = 0.82;
-  const scale = Math.min((targetSize * padding) / contentW, (targetSize * padding) / contentH);
-  const tx = targetSize / 2 - contentCenterX * scale;
-  const ty = targetSize / 2 - contentCenterY * scale;
-
+  // Rescale if viewBox is different (e.g. legacy 100x100 to 1000x1000)
+  const scaleX = targetSize / (vbW || 1);
+  const scaleY = targetSize / (vbH || 1);
   const contentMatch = baked.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
   if (!contentMatch) return baked;
 
-  // Build the rescaled SVG with a transform group, then bake it ONCE.
-  const rescaled = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetSize} ${targetSize}" fill="none"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
-  return bakeSvgTransforms(rescaled);
+  const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${targetSize} ${targetSize}"><g transform="scale(${scaleX}, ${scaleY})">${contentMatch[1]}</g></svg>`;
+  return bakeSvgTransforms(rawSvg);
 };
 
 export const smoothPoints = (points: DrawPoint[], strength: number): DrawPoint[] => {
@@ -1008,24 +990,22 @@ export const applyAutoKerning = (
 };
 
 const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
-  // First normalize the SVG to 100x100 canvas coordinates
-  const normalizedSvg = normalizeSvgToCanvas(art.svg);
+  // First normalize the SVG to 1000x1000 canvas coordinates
+  const normalizedSvg = normalizeSvgToCanvas(art.svg, 1000);
   const bounds = getGlyphBounds(normalizedSvg);
 
   if (bounds.isEmpty) {
     return { ...art, svg: normalizedSvg, scale: 100, x: 0, y: 0, rotation: 0 };
   }
 
-  // Standard font grid positions (in 100-unit coordinate space)
-  // These match the guide lines shown in FingerType canvas
-  const ascent = 18;    // top of uppercase letters
-  const capHeight = 26; // top of lowercase letters  
-  const baseline = 74;  // where letters sit
-  const descent = 88;   // bottom of descenders like g, j, p, q, y
+  // Standard font grid positions (in 1000-unit UPM coordinate space)
+  const ascent = 180;    // top of uppercase letters
+  const capHeight = 260; // top of lowercase letters  
+  const baseline = 740;  // where letters sit
+  const descent = 880;   // bottom of descenders like g, j, p, q, y
 
   const isLowercase = glyph >= 'a' && glyph <= 'z';
   const isDescender = "gjpqy".includes(glyph);
-  const isDigit = glyph >= '0' && glyph <= '9';
 
   // Determine target vertical zone
   let targetTop: number;
@@ -1051,26 +1031,15 @@ const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
     return { ...art, svg: normalizedSvg, scale: 100, x: 0, y: 0, rotation: 0 };
   }
 
-  // Simple 3-step transform:
-  // 1. Translate content origin to (0,0): translate(-minX, -minY)
-  // 2. Scale to fit target height: scale(s)
-  //    Also limit width to ~80% of canvas to prevent horizontal overflow
   const scaleFactor = targetHeight / currentH;
-  const maxW = 80;
+  const maxW = 800;
   const scaleW = currentW * scaleFactor > maxW ? maxW / currentW : scaleFactor;
   const finalScale = Math.min(scaleFactor, scaleW);
 
-  // After scaling, compute new dimensions
   const newW = currentW * finalScale;
   const newH = currentH * finalScale;
 
-  // 3. Translate to final position:
-  //    - Center horizontally: tx = (100 - newW) / 2
-  //    - Position vertically centered in target zone: ty = targetTop + (targetHeight - newH) / 2
-  //
-  // Combined transform: translate(finalTx, finalTy) scale(finalScale) translate(-minX, -minY)
-  // Which simplifies to: translate(finalTx - minX*finalScale, finalTy - minY*finalScale) scale(finalScale)
-  const tx = (100 - newW) / 2 - bounds.minX * finalScale;
+  const tx = (1000 - newW) / 2 - bounds.minX * finalScale;
   const ty = targetTop + (targetHeight - newH) / 2 - bounds.minY * finalScale;
 
   const contentMatch = normalizedSvg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
@@ -1078,7 +1047,7 @@ const neatForGlyph = (glyph: string, art: GlyphArt): GlyphArt => {
     return { ...art, svg: normalizedSvg, scale: 100, x: 0, y: 0, rotation: 0 };
   }
 
-  const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${finalScale})">${contentMatch[1]}</g></svg>`;
+  const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><g transform="translate(${tx}, ${ty}) scale(${finalScale})">${contentMatch[1]}</g></svg>`;
   const neatSvg = bakeSvgTransforms(rawSvg);
 
   return {
