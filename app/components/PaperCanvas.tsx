@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import type PaperTypes from 'paper';
-// Lazy-load paper to avoid SSR resolution (paper.js requires jsdom on server)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-eval
-const paper: any = typeof window !== 'undefined' ? eval("require")('paper/dist/paper-core') : null;
+import paper from 'paper/dist/paper-core';
 import { getCalligraphyPath, getPointedPath, normalizeSvgToCanvas } from './constants';
 import { DrawTool, DrawPoint } from './types';
 
@@ -98,7 +95,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
           insert: true,
           expandShapes: true,
           applyMatrix: true,
-        } as any);
+        });
       }
     }
   }, [initialSvg]);
@@ -111,7 +108,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
         insert: true,
         expandShapes: true,
         applyMatrix: true,
-      } as any);
+      });
     }
     isInternalChangeRef.current = true;
     if (onModificationRef.current) onModificationRef.current();
@@ -155,7 +152,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
           insert: true,
           expandShapes: true,
           applyMatrix: true,
-        } as any);
+        });
       }
       historyRef.current = [];
       historyIndexRef.current = -1;
@@ -187,16 +184,13 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     updateView();
 
     if (initialSvg) {
-      // normalizeSvgToCanvas may call bakeSvgTransforms which creates/destroys
-      // its own temporary scope — so do the normalization FIRST, then re-activate
-      // our scope before calling importSVG.
       const normalized = normalizeSvgToCanvas(initialSvg);
       scope.activate();
       scope.project.importSVG(normalized, {
         insert: true,
         expandShapes: true,
         applyMatrix: true,
-      } as any);
+      });
     }
     
     // Initialize history with initial state
@@ -232,9 +226,6 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       return pt;
     };
 
-    // CRITICAL: Ensure our scope is active before any tool operation.
-    // bakeSvgTransforms creates temporary scopes which can steal the active scope,
-    // causing hitTest coordinates to be wrong (clicking node A edits node B).
     const ensureActive = () => {
       if (scopeRef.current) scopeRef.current.activate();
     };
@@ -546,7 +537,7 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
     tool.activate();
 
-  }, [drawTool, brushSize, penType, penAngle, snapToGrid, gridSnapSize]); // Removed onModification
+  }, [drawTool, brushSize, penType, penAngle, snapToGrid, gridSnapSize]);
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 50 }}>
