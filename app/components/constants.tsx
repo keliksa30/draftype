@@ -111,7 +111,7 @@ export const cleanSvg = (source: string): string => {
     .replace(/\son\w+='[^']*'/gi, "");
 
   const vbMatch = cleaned.match(/viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([\d.]+)\s+([\d.]+)\s*["']/i);
-  let minX = 0, minY = 0, w = 100, h = 100;
+  let minX = 0, minY = 0, w = 1000, h = 1000;
   
   if (vbMatch) {
     minX = parseFloat(vbMatch[1]);
@@ -127,14 +127,14 @@ export const cleanSvg = (source: string): string => {
     }
   }
 
-  if (w !== 100 || h !== 100 || minX !== 0 || minY !== 0) {
-    const scale = Math.min(80 / w, 80 / h);
-    const tx = (100 - w * scale) / 2 - minX * scale;
-    const ty = (100 - h * scale) / 2 - minY * scale;
+  if (w !== 1000 || h !== 1000 || minX !== 0 || minY !== 0) {
+    const scale = Math.min(800 / w, 800 / h);
+    const tx = (1000 - w * scale) / 2 - minX * scale;
+    const ty = (1000 - h * scale) / 2 - minY * scale;
     
     const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
     if (contentMatch) {
-      const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+      const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
       cleaned = bakeSvgTransforms(rawSvg);
     }
   }
@@ -153,17 +153,14 @@ export const autoFitSvgContent = (svgString: string): string => {
   
   if (contentW <= 0 || contentH <= 0) return svgString;
   
-  // We want to fit this content into an 80x80 box centered in a 100x100 canvas.
-  const scale = Math.min(80 / contentW, 80 / contentH);
+  const scale = Math.min(800 / contentW, 800 / contentH);
   
-  // Calculate translations to center it.
-  const tx = 50 - (bounds.minX + contentW / 2) * scale;
-  const ty = 50 - (bounds.minY + contentH / 2) * scale;
+  const tx = 500 - (bounds.minX + contentW / 2) * scale;
+  const ty = 500 - (bounds.minY + contentH / 2) * scale;
   
-  // Wrap the entire content of the SVG inside a transform group
   const contentMatch = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
   if (contentMatch) {
-    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
+    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><g transform="translate(${tx}, ${ty}) scale(${scale})">${contentMatch[1]}</g></svg>`;
     return bakeSvgTransforms(rawSvg);
   }
   return svgString;

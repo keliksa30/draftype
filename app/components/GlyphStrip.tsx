@@ -48,6 +48,25 @@ export default function GlyphStrip({
           >
             {glyphs.map((glyph) => {
               const item = glyphMap[glyph];
+              let iconSvg = "";
+              if (item?.svg) {
+                const contentMatch = item.svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+                let innerContent = contentMatch ? contentMatch[1] : item.svg;
+                innerContent = innerContent
+                  .replace(/fill=["']#000000["']/gi, 'fill="currentColor"')
+                  .replace(/fill=["']black["']/gi, 'fill="currentColor"')
+                  .replace(/stroke=["']#000000["']/gi, 'stroke="currentColor"')
+                  .replace(/stroke=["']black["']/gi, 'stroke="currentColor"')
+                  .replace(/#000000/gi, "currentColor")
+                  .replace(/black/gi, "currentColor");
+
+                const viewBox = item.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
+                const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 1000, 1000];
+                const [, , viewWidth = 1000, viewHeight = 1000] = viewParts;
+
+                iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewParts[0]} ${viewParts[1]} ${viewWidth} ${viewHeight}" fill="currentColor" stroke="currentColor" style="width:100%;height:100%;display:block;overflow:visible;"><g fill="currentColor" stroke="currentColor">${innerContent}</g></svg>`;
+              }
+
               return (
                 <button
                   className={`glyph-cell ${glyph === activeGlyph ? "selected" : ""} ${
@@ -58,12 +77,17 @@ export default function GlyphStrip({
                   aria-label={`Edit glyph ${glyph}`}
                 >
                   <span>{glyph}</span>
-                  {item?.svg ? (
+                  {iconSvg ? (
                     <i
                       style={{
                         transform: `translate(${item.x}px, ${item.y}px) rotate(${item.rotation}deg) scale(${item.scale / 100})`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "70%",
+                        height: "70%",
                       }}
-                      dangerouslySetInnerHTML={{ __html: item.svg }}
+                      dangerouslySetInnerHTML={{ __html: iconSvg }}
                     />
                   ) : null}
                 </button>
