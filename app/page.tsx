@@ -2745,9 +2745,56 @@ function MainApp() {
           path.close();
         });
       } else {
-        contours.forEach((contour) => {
-          if (contour.segments.length === 0) return;
-          if (isWhite) {
+        // 1. Build polygon point lists for each contour
+        const contourInfos = contours.map((contour) => {
+          const pts: { x: number; y: number }[] = [contour.startPt];
+          contour.segments.forEach((seg) => pts.push(seg.end));
+          
+          let signedArea = 0;
+          for (let i = 0; i < pts.length; i++) {
+            const j = (i + 1) % pts.length;
+            signedArea += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+          }
+          signedArea /= 2;
+
+          const minX = Math.min(...pts.map(p => p.x));
+          const maxX = Math.max(...pts.map(p => p.x));
+          const minY = Math.min(...pts.map(p => p.y));
+          const maxY = Math.max(...pts.map(p => p.y));
+
+          // A background frame contour spans the full canvas width and height with 4-6 vertices
+          const isFrame = minX <= 180 && minY <= 100 && maxX >= 820 && maxY >= 780 && pts.length <= 8 && Math.abs(signedArea) > 300000;
+
+          return { contour, pts, signedArea, isFrame, minX, maxX, minY, maxY };
+        }).filter(info => info.contour.segments.length > 0 && !info.isFrame);
+
+        // 2. Determine nesting depth for each non-frame contour
+        contourInfos.forEach((info, idx) => {
+          const testPt = info.pts[0];
+          let nestingDepth = 0;
+          contourInfos.forEach((other, oIdx) => {
+            if (idx === oIdx) return;
+            if (info.minX >= other.minX && info.maxX <= other.maxX && info.minY >= other.minY && info.maxY <= other.maxY) {
+              let inside = false;
+              const oPts = other.pts;
+              for (let i = 0, j = oPts.length - 1; i < oPts.length; j = i++) {
+                const xi = oPts[i].x, yi = oPts[i].y;
+                const xj = oPts[j].x, yj = oPts[j].y;
+                const intersect = ((yi > testPt.y) !== (yj > testPt.y)) &&
+                  (testPt.x < (xj - xi) * (testPt.y - yi) / (yj - yi || 1) + xi);
+                if (intersect) inside = !inside;
+              }
+              if (inside) nestingDepth++;
+            }
+          });
+
+          // Odd nesting level or isWhite means this contour is an inner cutout (hole)
+          const shouldBeHole = isWhite || (nestingDepth % 2 === 1);
+          // Standard OTF winding: Outer shapes should be Clockwise (signedArea > 0), holes Counter-Clockwise (signedArea < 0)
+          const isReversed = shouldBeHole ? (info.signedArea > 0) : (info.signedArea < 0);
+
+          const contour = info.contour;
+          if (isReversed) {
             const lastPt = contour.segments[contour.segments.length - 1].end;
             path.moveTo(lastPt.x, lastPt.y);
             for (let i = contour.segments.length - 1; i >= 0; i--) {
