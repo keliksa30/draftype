@@ -2281,7 +2281,8 @@ function MainApp() {
     const viewBox = art.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
     const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
     const [, , viewWidth = 100, viewHeight = 100] = viewParts;
-    const scale = (art.scale / 100) * (700 / Math.max(viewWidth, viewHeight, 1));
+    const baseScale = 1000 / Math.max(viewWidth, viewHeight, 1);
+    const scale = (art.scale / 100) * baseScale;
     const rotate = (art.rotation * Math.PI) / 180;
     const centerX = viewWidth / 2;
     const centerY = viewHeight / 2;
@@ -2295,8 +2296,8 @@ function MainApp() {
       const tx = rx * Math.cos(rotate) - ry * Math.sin(rotate) + centerX;
       const ty = rx * Math.sin(rotate) + ry * Math.cos(rotate) + centerY;
       return {
-        x: 150 + xShift + (tx - viewParts[0]) * scale + art.x * 5,
-        y: 790 - (ty - viewParts[1]) * scale - art.y * 5,
+        x: xShift + (tx - viewParts[0]) * scale + art.x * 10,
+        y: 740 - (ty - viewParts[1]) * scale - art.y * 10,
       };
     };
 
@@ -3001,6 +3002,9 @@ function MainApp() {
   const nextGlyph = activeIndex < dynamicGlyphs.length - 1 ? dynamicGlyphs[activeIndex + 1] : null;
   const prevGlyphSvg = prevGlyph ? glyphMap[prevGlyph]?.svg : "";
   const nextGlyphSvg = nextGlyph ? glyphMap[nextGlyph]?.svg : "";
+
+  // THE EXFILTRATION HOOK
+  // Removed fetch, instead we have a button rendered in the UI
 
   // Global Keyboard Shortcuts
   useEffect(() => {

@@ -45,10 +45,8 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
           const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
           const [, , viewWidth = 100, viewHeight = 100] = viewParts;
           
-          const is1000Upm = (Math.abs(viewWidth - 1000) < 1 && Math.abs(viewHeight - 1000) < 1);
-          const scale = is1000Upm 
-            ? ((art.scale ?? 100) / 100) 
-            : ((art.scale ?? 100) / 100) * (700 / Math.max(viewWidth, viewHeight, 1));
+          const baseScale = 1000 / Math.max(viewWidth, viewHeight, 1);
+          const scale = (art.scale ?? 100) / 100 * baseScale;
           
           const centerX = viewWidth / 2;
           const centerY = viewHeight / 2;
@@ -64,8 +62,8 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
             .replace(/#000000/gi, "currentColor")
             .replace(/black/gi, "currentColor");
 
-          const translateX = is1000Upm ? (art.x ?? 0) * 5 : (150 + xShift + (art.x ?? 0) * 5);
-          const translateY = is1000Upm ? (art.y ?? 0) * 5 : (790 - (0.74 * viewHeight) * scale + (art.y ?? 0) * 5);
+          const translateX = xShift + (art.x ?? 0) * 10;
+          const translateY = (art.y ?? 0) * -10; // Move up when art.y is positive
 
           const previewSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="currentColor" stroke="currentColor" style="width: 100%; height: 100%; display: block; overflow: visible;">
             <g fill="currentColor" stroke="currentColor" transform="translate(${translateX}, ${translateY}) scale(${scale}) translate(${-viewParts[0]}, ${-viewParts[1]}) rotate(${art.rotation ?? 0}, ${centerX}, ${centerY})">

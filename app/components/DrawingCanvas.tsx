@@ -270,19 +270,19 @@ export default function DrawingCanvas({
 
                   {/* CAP HEIGHT / ASCENT */}
                   <line x1="0" y1="180" x2="1000" y2="180" stroke="#ff4136" strokeWidth="4" />
-                  <text x="24" y="160" className="guide-line-text" fill="#ff4136" fontSize="36" fontWeight="bold">ASCENT</text>
+                  <text x="24" y="174" className="guide-line-text" fill="#ff4136" fontSize={Math.max(12, 3600 / fingerZoom)} fontWeight="bold">ASCENT</text>
 
                   {/* X-HEIGHT */}
                   <line x1="0" y1="460" x2="1000" y2="460" stroke="#b10dc9" strokeDasharray="16,16" strokeWidth="4" />
-                  <text x="24" y="440" className="guide-line-text" fill="#b10dc9" fontSize="36" fontWeight="bold">X-HEIGHT</text>
+                  <text x="24" y="454" className="guide-line-text" fill="#b10dc9" fontSize={Math.max(12, 3600 / fingerZoom)} fontWeight="bold">X-HEIGHT</text>
 
                   {/* BASELINE */}
                   <line x1="0" y1="740" x2="1000" y2="740" stroke="#0074d9" strokeWidth="6" />
-                  <text x="24" y="716" className="guide-line-text" fill="#0074d9" fontSize="36" fontWeight="bold">BASELINE</text>
+                  <text x="24" y="734" className="guide-line-text" fill="#0074d9" fontSize={Math.max(12, 3600 / fingerZoom)} fontWeight="bold">BASELINE</text>
 
                   {/* DESCENDER */}
                   <line x1="0" y1="880" x2="1000" y2="880" stroke="#0074d9" strokeDasharray="16,16" strokeWidth="4" />
-                  <text x="24" y="856" className="guide-line-text" fill="#0074d9" fontSize="36" fontWeight="bold">DESCENT</text>
+                  <text x="24" y="874" className="guide-line-text" fill="#0074d9" fontSize={Math.max(12, 3600 / fingerZoom)} fontWeight="bold">DESCENT</text>
                 </g>
               ) : null}
               {referenceImage ? (
@@ -597,12 +597,12 @@ export default function DrawingCanvas({
                   {snapToGrid && (
                     <pattern
                       id="grid-snap-pattern-typetaptoe"
-                      width={gridSnapSize / 10}
-                      height={gridSnapSize / 10}
+                      width={gridSnapSize}
+                      height={gridSnapSize}
                       patternUnits="userSpaceOnUse"
                     >
                       <path
-                        d={`M ${gridSnapSize / 10} 0 L 0 0 0 ${gridSnapSize / 10}`}
+                        d={`M ${gridSnapSize} 0 L 0 0 0 ${gridSnapSize}`}
                         fill="none"
                         stroke="var(--line)"
                         strokeWidth="0.15"

@@ -187,11 +187,6 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 1000): stri
     return cleaned;
   }
 
-  // If input is legacy 100x100 or another base size, check if it already contains scale transform to avoid compounding
-  if (cleaned.includes('scale(')) {
-    return cleaned.replace(/viewBox=["'][^"']*["']/i, `viewBox="0 0 ${targetSize} ${targetSize}"`);
-  }
-
   const scale = targetSize / (vbW || 1);
   const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
   if (!contentMatch) return cleaned;
