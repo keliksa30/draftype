@@ -659,6 +659,7 @@ export default function DrawingCanvas({
                 {(hasTypeDraft || !selectedGlyph.svg) ? (
                   workingSvg ? (
                     <g
+                      transform={`translate(50, 50) translate(${selectedGlyph.x}, ${selectedGlyph.y}) rotate(${selectedGlyph.rotation}) scale(${selectedGlyph.scale / 100}) translate(-50, -50)`}
                       dangerouslySetInnerHTML={{ __html: forceSvgToFullPercent(workingSvg) }}
                     />
                   ) : null
