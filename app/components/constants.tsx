@@ -179,7 +179,7 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 1000): stri
     vbH = parseFloat(vbMatch[4]);
   }
 
-  // If already targetSize (1000x1000), return directly to prevent double-scaling
+  // If already targetSize or higher resolution canvas (e.g. 1000x1000), return directly without transform scaling
   if (Math.abs(vbW - targetSize) < 1 && Math.abs(vbH - targetSize) < 1) {
     if (/viewBox=["'][^"']*["']/i.test(cleaned)) {
       return cleaned.replace(/viewBox=["'][^"']*["']/i, `viewBox="0 0 ${targetSize} ${targetSize}"`);
@@ -187,7 +187,11 @@ export const normalizeSvgToCanvas = (svgString: string, targetSize = 1000): stri
     return cleaned;
   }
 
-  // If converting from legacy 100x100 to 1000x1000:
+  // If input is legacy 100x100 or another base size, check if it already contains scale transform to avoid compounding
+  if (cleaned.includes('scale(')) {
+    return cleaned.replace(/viewBox=["'][^"']*["']/i, `viewBox="0 0 ${targetSize} ${targetSize}"`);
+  }
+
   const scale = targetSize / (vbW || 1);
   const contentMatch = cleaned.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
   if (!contentMatch) return cleaned;

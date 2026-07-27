@@ -42,10 +42,10 @@ export default function LivePreview({ previewText, setPreviewText, glyphMap }: L
 
           const bounds = getGlyphBounds(art.svg);
           const viewBox = art.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
-          const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 1000, 1000];
-          const [, , viewWidth = 1000, viewHeight = 1000] = viewParts;
+          const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
+          const [, , viewWidth = 100, viewHeight = 100] = viewParts;
           
-          const is1000Upm = (viewWidth === 1000 && viewHeight === 1000);
+          const is1000Upm = (Math.abs(viewWidth - 1000) < 1 && Math.abs(viewHeight - 1000) < 1);
           const scale = is1000Upm 
             ? ((art.scale ?? 100) / 100) 
             : ((art.scale ?? 100) / 100) * (700 / Math.max(viewWidth, viewHeight, 1));

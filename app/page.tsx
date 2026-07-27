@@ -2790,8 +2790,10 @@ function MainApp() {
 
           // Odd nesting level or isWhite means this contour is an inner cutout (hole)
           const shouldBeHole = isWhite || (nestingDepth % 2 === 1);
-          // Standard OTF winding: Outer shapes should be Clockwise (signedArea > 0), holes Counter-Clockwise (signedArea < 0)
-          const isReversed = shouldBeHole ? (info.signedArea > 0) : (info.signedArea < 0);
+          // Standard OpenType TrueType / Postscript contour winding order in Y-up space:
+          // Outer contours MUST be Counter-Clockwise (signedArea < 0 in standard shoe formula for Y-up points).
+          // Inner holes MUST be Clockwise (signedArea > 0).
+          const isReversed = shouldBeHole ? (info.signedArea < 0) : (info.signedArea > 0);
 
           const contour = info.contour;
           if (isReversed) {

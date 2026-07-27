@@ -593,7 +593,28 @@ export default function DrawingCanvas({
                 role="img"
                 aria-label="TypeTapToe canvas"
               >
+                <defs>
+                  {snapToGrid && (
+                    <pattern
+                      id="grid-snap-pattern-typetaptoe"
+                      width={gridSnapSize / 10}
+                      height={gridSnapSize / 10}
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <path
+                        d={`M ${gridSnapSize / 10} 0 L 0 0 0 ${gridSnapSize / 10}`}
+                        fill="none"
+                        stroke="var(--line)"
+                        strokeWidth="0.15"
+                        opacity="0.25"
+                      />
+                    </pattern>
+                  )}
+                </defs>
                 <rect className="draw-bg" width="100" height="100" />
+                {snapToGrid && (
+                  <rect width="100" height="100" fill="url(#grid-snap-pattern-typetaptoe)" style={{ pointerEvents: "none" }} />
+                )}
                 {templateStyle !== "none" && (
                   <text
                     x="50"
