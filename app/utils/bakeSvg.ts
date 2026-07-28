@@ -40,6 +40,9 @@ export const bakeSvgTransforms = (svgString: string): string => {
     // Create isolated scope
     const scope = new paper.PaperScope();
     scope.setup(canvas);
+    
+    // FORCE exact resolution bypassing any CSS sizing interference
+    scope.project.view.viewSize = new paper.Size(parseFloat(vbW), parseFloat(vbH));
 
     scope.project.importSVG(svgString, {
       insert: true,
@@ -47,7 +50,10 @@ export const bakeSvgTransforms = (svgString: string): string => {
       applyMatrix: true
     });
 
-    const svgNode = scope.project.exportSVG({ asString: false }) as SVGElement;
+    const svgNode = scope.project.exportSVG({ 
+      asString: false,
+      bounds: new scope.Rectangle(0, 0, parseFloat(vbW), parseFloat(vbH))
+    }) as SVGElement;
     svgNode.setAttribute('viewBox', vb);
     svgNode.setAttribute('width', vbW);
     svgNode.setAttribute('height', vbH);

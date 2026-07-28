@@ -76,7 +76,21 @@ export default function GlyphStrip({
                   onClick={() => setActiveGlyph(glyph)}
                   aria-label={`Edit glyph ${glyph}`}
                 >
-                  <span>{glyph}</span>
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "4px",
+                      left: "6px",
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      opacity: 0.75,
+                      lineHeight: 1,
+                      pointerEvents: "none",
+                      zIndex: 2,
+                    }}
+                  >
+                    {glyph}
+                  </span>
                   {iconSvg ? (
                     <i
                       style={{

@@ -4,6 +4,7 @@
 
 
 import { ChangeEvent, PointerEvent, useMemo, useRef, useState, useEffect } from "react";
+import paper from "paper/dist/paper-core";
 
 // Components
 import ProjectActions from "./components/ProjectActions";
@@ -2248,24 +2249,6 @@ function MainApp() {
 
   // ─── Font Export ─────────────────────────────────────────────────────────────
 
-  const addRectToPath = (
-    path: {
-      moveTo: (x: number, y: number) => void;
-      lineTo: (x: number, y: number) => void;
-      close: () => void;
-    },
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ) => {
-    path.moveTo(x, y);
-    path.lineTo(x + width, y);
-    path.lineTo(x + width, y - height);
-    path.lineTo(x, y - height);
-    path.close();
-  };
-
   const makeExportPath = (
     opentype: { Path: new () => {
       moveTo: (x: number, y: number) => void;
@@ -2275,19 +2258,20 @@ function MainApp() {
       close: () => void;
     } },
     art: GlyphArt,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     fallbackGlyph: string,
   ) => {
     const path = new opentype.Path();
+    if (!art.svg || !art.svg.trim()) return path;
+
     const viewBox = art.svg.match(/viewBox=["']([^"']+)["']/i)?.[1];
-    const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 100, 100];
-    const [, , viewWidth = 100, viewHeight = 100] = viewParts;
+    const viewParts = viewBox?.split(/\s+/).map(Number) ?? [0, 0, 1000, 1000];
+    const [, , viewWidth = 1000, viewHeight = 1000] = viewParts;
     const baseScale = 1000 / Math.max(viewWidth, viewHeight, 1);
     const scale = (art.scale / 100) * baseScale;
-    const rotate = (art.rotation * Math.PI) / 180;
+    const rotate = ((art.rotation || 0) * Math.PI) / 180;
     const centerX = viewWidth / 2;
     const centerY = viewHeight / 2;
-    // xShift: move path left so leftmost pixel aligns with desired LSB
-    // In proportional mode, caller computes this. In monospace mode it's 0.
     const xShift = (art as GlyphArt & { _xShift?: number })._xShift ?? 0;
 
     const transform = (x: number, y: number) => {
@@ -2301,602 +2285,136 @@ function MainApp() {
       };
     };
 
-    const drawCircle = (cx: number, cy: number, r: number, isWhite = false) => {
-      const k = r * 0.5522848;
-      path.moveTo(cx, cy - r);
-      if (path.bezierCurveTo) {
-        if (isWhite) {
-          path.bezierCurveTo(cx - k, cy - r, cx - r, cy - k, cx - r, cy);
-          path.bezierCurveTo(cx - r, cy + k, cx - k, cy + r, cx, cy + r);
-          path.bezierCurveTo(cx + k, cy + r, cx + r, cy + k, cx + r, cy);
-          path.bezierCurveTo(cx + r, cy - k, cx + k, cy - r, cx, cy - r);
-        } else {
-          path.bezierCurveTo(cx + k, cy - r, cx + r, cy - k, cx + r, cy);
-          path.bezierCurveTo(cx + r, cy + k, cx + k, cy + r, cx, cy + r);
-          path.bezierCurveTo(cx - k, cy + r, cx - r, cy + k, cx - r, cy);
-          path.bezierCurveTo(cx - r, cy - k, cx - k, cy - r, cx, cy - r);
-        }
+    const savedProject = paper.project ?? null;
+    let canvas: HTMLCanvasElement | null = null;
+
+    try {
+      if (typeof document !== "undefined") {
+        canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(viewWidth));
+        canvas.height = Math.max(1, Math.round(viewHeight));
+        canvas.style.cssText = "position:absolute;top:-9999px;left:-9999px;visibility:hidden;pointer-events:none";
+        document.body.appendChild(canvas);
+      }
+
+      const scope = new paper.PaperScope();
+      if (canvas) {
+        scope.setup(canvas);
       } else {
-        path.lineTo(cx + r, cy - r); path.lineTo(cx + r, cy + r); path.lineTo(cx - r, cy + r); path.lineTo(cx - r, cy - r);
+        scope.setup(new scope.Size(viewWidth, viewHeight));
       }
-      path.close();
-    };
 
-    const drawThickSegment = (p1: {x:number, y:number}, p2: {x:number, y:number}, thickness: number, isWhite = false) => {
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) return;
-      const len = Math.hypot(dx, dy);
-      
-      const r = thickness / 2;
-      const k = r * 0.5522848;
-      
-      const tx = dx / len;
-      const ty = dy / len;
-      const nx = -ty;
-      const ny = tx;
+      scope.project.importSVG(art.svg, {
+        insert: true,
+        expandShapes: true,
+        applyMatrix: true,
+      });
 
-      if (isWhite) {
-        path.moveTo(p1.x - nx * r, p1.y - ny * r);
-        path.bezierCurveTo!(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
-        path.bezierCurveTo!(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
-        path.lineTo(p2.x + nx * r, p2.y + ny * r);
-        path.bezierCurveTo!(p2.x + nx * r + tx * k, p2.y + ty * r - ny * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
-        path.bezierCurveTo!(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r + ty * k, p2.x - nx * r, p2.y - ny * r);
-        path.lineTo(p1.x - nx * r, p1.y - ny * r);
-      } else {
-        path.moveTo(p1.x + nx * r, p1.y + ny * r);
-        path.lineTo(p2.x + nx * r, p2.y + ny * r);
-        path.bezierCurveTo!(p2.x + nx * r + tx * k, p2.y + ny * r + ty * k, p2.x + tx * r + nx * k, p2.y + ty * r + ny * k, p2.x + tx * r, p2.y + ty * r);
-        path.bezierCurveTo!(p2.x + tx * r - nx * k, p2.y + ty * r - ny * k, p2.x - nx * r + tx * k, p2.y - ny * r + ty * k, p2.x - nx * r, p2.y - ny * r);
-        path.lineTo(p1.x - nx * r, p1.y - ny * r);
-        path.bezierCurveTo!(p1.x - nx * r - tx * k, p1.y - ny * r - ty * k, p1.x - tx * r - nx * k, p1.y - ty * r - ny * k, p1.x - tx * r, p1.y - ty * r);
-        path.bezierCurveTo!(p1.x - tx * r + nx * k, p1.y - ty * r + ny * k, p1.x + nx * r - tx * k, p1.y + ny * r - ty * k, p1.x + nx * r, p1.y + ny * r);
-        path.lineTo(p1.x + nx * r, p1.y + ny * r);
-      }
-      path.close();
-    };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const traverseItem = (item: any) => {
+        if (!item || !item.visible) return;
 
-    let drew = false;
+        if (item.className === "Path") {
+          const segments = item.segments;
+          if (!segments || segments.length === 0) return;
 
-    // Helper to check if style indicates white (eraser or subtractive shape)
-    const checkIsWhite = (tagStr: string) => {
-      return tagStr.includes('stroke="#ffffff"') || 
-             tagStr.includes('stroke="white"') || 
-             tagStr.includes('stroke="#fff"') || 
-             tagStr.includes('fill="#ffffff"') || 
-             tagStr.includes('fill="white"') || 
-             tagStr.includes('fill="#fff"');
-    };
+          const fillColor = item.fillColor ? item.fillColor.toCSS(true) : "";
+          const strokeColor = item.strokeColor ? item.strokeColor.toCSS(true) : "";
+          const isWhite = fillColor === "#ffffff" || fillColor === "white" || strokeColor === "#ffffff" || strokeColor === "white";
+          const closed = item.closed;
+          const n = segments.length;
 
-    // 1. Rectangles (order-independent attribute parsing)
-    const rectTags = art.svg.match(/<rect[^>]*>/gi) || [];
-    for (const tag of rectTags) {
-      const xMatch = tag.match(/x=["']?(-?\d*\.?\d+)["']?/i);
-      const yMatch = tag.match(/y=["']?(-?\d*\.?\d+)["']?/i);
-      const wMatch = tag.match(/width=["']?(\d*\.?\d+)["']?/i);
-      const hMatch = tag.match(/height=["']?(\d*\.?\d+)["']?/i);
-      
-      const x = xMatch ? Number(xMatch[1]) : 0;
-      const y = yMatch ? Number(yMatch[1]) : 0;
-      const width = wMatch ? Number(wMatch[1]) : 0;
-      const height = hMatch ? Number(hMatch[1]) : 0;
-      
-      const p1 = transform(x, y);
-      const p2 = transform(x + width, y);
-      const p3 = transform(x + width, y + height);
-      const p4 = transform(x, y + height);
-      
-      const isWhite = checkIsWhite(tag);
-      if (isWhite) {
-        path.moveTo(p1.x, p1.y); path.lineTo(p4.x, p4.y); path.lineTo(p3.x, p3.y); path.lineTo(p2.x, p2.y); path.close();
-      } else {
-        path.moveTo(p1.x, p1.y); path.lineTo(p2.x, p2.y); path.lineTo(p3.x, p3.y); path.lineTo(p4.x, p4.y); path.close();
-      }
-      drew = true;
-    }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const pts = segments.map((seg: any) => {
+            const p = seg.point;
+            const hIn = seg.handleIn;
+            const hOut = seg.handleOut;
+            const globalP = item.matrix ? item.matrix.transform(p) : p;
+            const globalHIn = item.matrix ? item.matrix.transform(p.add(hIn)) : p.add(hIn);
+            const globalHOut = item.matrix ? item.matrix.transform(p.add(hOut)) : p.add(hOut);
 
-    // 2. Lines (order-independent attribute parsing)
-    const lineTags = art.svg.match(/<line[^>]*>/gi) || [];
-    for (const tag of lineTags) {
-      const x1Match = tag.match(/x1=["']?(-?\d*\.?\d+)["']?/i);
-      const y1Match = tag.match(/y1=["']?(-?\d*\.?\d+)["']?/i);
-      const x2Match = tag.match(/x2=["']?(-?\d*\.?\d+)["']?/i);
-      const y2Match = tag.match(/y2=["']?(-?\d*\.?\d+)["']?/i);
-      
-      const x1 = x1Match ? Number(x1Match[1]) : 0;
-      const y1 = y1Match ? Number(y1Match[1]) : 0;
-      const x2 = x2Match ? Number(x2Match[1]) : 0;
-      const y2 = y2Match ? Number(y2Match[1]) : 0;
-      
-      const p1 = transform(x1, y1);
-      const p2 = transform(x2, y2);
-      const swMatch = tag.match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
-      const sw = swMatch ? Number(swMatch[1]) * scale : 10 * scale;
-      const isWhite = checkIsWhite(tag);
-      drawThickSegment(p1, p2, sw, isWhite);
-      drew = true;
-    }
+            return {
+              pt: transform(globalP.x, globalP.y),
+              cIn: transform(globalHIn.x, globalHIn.y),
+              cOut: transform(globalHOut.x, globalHOut.y),
+              hInIsZero: hIn.isZero(),
+              hOutIsZero: hOut.isZero(),
+            };
+          });
 
-    // 3. Ellipses & Circles (order-independent attribute parsing)
-    const ellipseTags = art.svg.match(/<(?:ellipse|circle)[^>]*>/gi) || [];
-    for (const tag of ellipseTags) {
-      const cxMatch = tag.match(/cx=["']?(-?\d*\.?\d+)["']?/i);
-      const cyMatch = tag.match(/cy=["']?(-?\d*\.?\d+)["']?/i);
-      const rxMatch = tag.match(/rx=["']?(\d*\.?\d+)["']?/i);
-      const ryMatch = tag.match(/ry=["']?(\d*\.?\d+)["']?/i);
-      const rMatch = tag.match(/r=["']?(\d*\.?\d+)["']?/i);
-      
-      const cx = cxMatch ? Number(cxMatch[1]) : 0;
-      const cy = cyMatch ? Number(cyMatch[1]) : 0;
-      const rx = rxMatch ? Number(rxMatch[1]) : (rMatch ? Number(rMatch[1]) : 0);
-      const ry = ryMatch ? Number(ryMatch[1]) : (rMatch ? Number(rMatch[1]) : 0);
-      
-      const K = 0.5522848;
-      const dx = rx * K;
-      const dy = ry * K;
-      const p1 = transform(cx, cy - ry);
-      const c1 = transform(cx + dx, cy - ry);
-      const c2 = transform(cx + rx, cy - dy);
-      const p2 = transform(cx + rx, cy);
-      const c3 = transform(cx + rx, cy + dy);
-      const c4 = transform(cx + dx, cy + ry);
-      const p3 = transform(cx, cy + ry);
-      const c5 = transform(cx - dx, cy + ry);
-      const c6 = transform(cx - rx, cy + dy);
-      const p4 = transform(cx - rx, cy);
-      const c7 = transform(cx - rx, cy - dy);
-      const c8 = transform(cx - dx, cy - ry);
-      
-      const isWhite = checkIsWhite(tag);
-      path.moveTo(p1.x, p1.y);
-      if (path.bezierCurveTo) {
-        if (isWhite) {
-          path.bezierCurveTo(c8.x, c8.y, c7.x, c7.y, p4.x, p4.y);
-          path.bezierCurveTo(c6.x, c6.y, c5.x, c5.y, p3.x, p3.y);
-          path.bezierCurveTo(c4.x, c4.y, c3.x, c3.y, p2.x, p2.y);
-          path.bezierCurveTo(c2.x, c2.y, c1.x, c1.y, p1.x, p1.y);
-        } else {
-          path.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p2.x, p2.y);
-          path.bezierCurveTo(c3.x, c3.y, c4.x, c4.y, p3.x, p3.y);
-          path.bezierCurveTo(c5.x, c5.y, c6.x, c6.y, p4.x, p4.y);
-          path.bezierCurveTo(c7.x, c7.y, c8.x, c8.y, p1.x, p1.y);
-        }
-      } else {
-        path.lineTo(p2.x, p2.y); path.lineTo(p3.x, p3.y); path.lineTo(p4.x, p4.y); path.lineTo(p1.x, p1.y);
-      }
-      path.close();
-      drew = true;
-    }
-
-    // Helper for parsing SVG path d strings
-    const parsePathD = (d: string, thickness: number, isWhite: boolean) => {
-      interface PathSegment {
-        type: 'L' | 'Q' | 'C';
-        start: { x: number; y: number };
-        end: { x: number; y: number };
-        c1?: { x: number; y: number };
-        c2?: { x: number; y: number };
-      }
-      
-      interface PathContour {
-        startPt: { x: number; y: number };
-        segments: PathSegment[];
-        closed: boolean;
-      }
-      
-      const contours: PathContour[] = [];
-      let currentContour: PathContour | null = null;
-      let currX = 0; let currY = 0;
-      let startX = 0; let startY = 0;
-      let lastP = { x: 0, y: 0 };
-
-      const regex = /([MmLlHhVvQqCcZz])\s*([0-9eE\s,.-]*)/g;
-      let cmdMatch;
-
-      while ((cmdMatch = regex.exec(d)) !== null) {
-        const cmd = cmdMatch[1];
-        const argsStr = cmdMatch[2] || "";
-        const argMatches = argsStr.match(/-?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g);
-        const args = argMatches ? argMatches.map(Number) : [];
-        
-        if (cmd === 'M' || cmd === 'm') {
-          const isRel = cmd === 'm';
-          for (let i = 0; i < args.length; i += 2) {
-            if (i + 1 >= args.length) break;
-            let x = args[i]; let y = args[i+1];
-            if (isRel) { x += currX; y += currY; }
-            currX = x; currY = y;
-            const pt = transform(x, y);
-            if (i === 0) {
-              startX = x; startY = y;
-              if (currentContour) contours.push(currentContour);
-              currentContour = { startPt: pt, segments: [], closed: false };
+          if (pts.length > 0) {
+            if (isWhite) {
+              const last = pts[pts.length - 1];
+              path.moveTo(last.pt.x, last.pt.y);
+              for (let i = pts.length - 1; i > 0; i--) {
+                const curr = pts[i];
+                const prev = pts[i - 1];
+                if (curr.hInIsZero && prev.hOutIsZero) {
+                  path.lineTo(prev.pt.x, prev.pt.y);
+                } else if (path.bezierCurveTo) {
+                  path.bezierCurveTo(curr.cIn.x, curr.cIn.y, prev.cOut.x, prev.cOut.y, prev.pt.x, prev.pt.y);
+                } else {
+                  path.lineTo(prev.pt.x, prev.pt.y);
+                }
+              }
+              if (closed && pts.length > 1) {
+                const first = pts[0];
+                if (first.hInIsZero && last.hOutIsZero) {
+                  path.lineTo(first.pt.x, first.pt.y);
+                } else if (path.bezierCurveTo) {
+                  path.bezierCurveTo(first.cIn.x, first.cIn.y, last.cOut.x, last.cOut.y, first.pt.x, first.pt.y);
+                } else {
+                  path.lineTo(first.pt.x, first.pt.y);
+                }
+                path.close();
+              }
             } else {
-              if (currentContour) {
-                currentContour.segments.push({ type: 'L', start: lastP, end: pt });
+              const first = pts[0];
+              path.moveTo(first.pt.x, first.pt.y);
+              for (let i = 0; i < n - 1; i++) {
+                const curr = pts[i];
+                const next = pts[i + 1];
+                if (curr.hOutIsZero && next.hInIsZero) {
+                  path.lineTo(next.pt.x, next.pt.y);
+                } else if (path.bezierCurveTo) {
+                  path.bezierCurveTo(curr.cOut.x, curr.cOut.y, next.cIn.x, next.cIn.y, next.pt.x, next.pt.y);
+                } else {
+                  path.lineTo(next.pt.x, next.pt.y);
+                }
+              }
+              if (closed && n > 1) {
+                const last = pts[n - 1];
+                if (last.hOutIsZero && first.hInIsZero) {
+                  path.lineTo(first.pt.x, first.pt.y);
+                } else if (path.bezierCurveTo) {
+                  path.bezierCurveTo(last.cOut.x, last.cOut.y, first.cIn.x, first.cIn.y, first.pt.x, first.pt.y);
+                } else {
+                  path.lineTo(first.pt.x, first.pt.y);
+                }
+                path.close();
               }
             }
-            lastP = pt;
           }
-        } else if (cmd === 'L' || cmd === 'l') {
-          const isRel = cmd === 'l';
-          for (let i = 0; i < args.length; i += 2) {
-            if (i + 1 >= args.length) break;
-            let x = args[i]; let y = args[i+1];
-            if (isRel) { x += currX; y += currY; }
-            currX = x; currY = y;
-            const pt = transform(x, y);
-            if (currentContour) {
-              currentContour.segments.push({ type: 'L', start: lastP, end: pt });
-            }
-            lastP = pt;
-          }
-        } else if (cmd === 'H' || cmd === 'h') {
-          const isRel = cmd === 'h';
-          for (let i = 0; i < args.length; i++) {
-            let x = args[i];
-            if (isRel) x += currX;
-            currX = x;
-            const pt = transform(currX, currY);
-            if (currentContour) {
-              currentContour.segments.push({ type: 'L', start: lastP, end: pt });
-            }
-            lastP = pt;
-          }
-        } else if (cmd === 'V' || cmd === 'v') {
-          const isRel = cmd === 'v';
-          for (let i = 0; i < args.length; i++) {
-            let y = args[i];
-            if (isRel) y += currY;
-            currY = y;
-            const pt = transform(currX, currY);
-            if (currentContour) {
-              currentContour.segments.push({ type: 'L', start: lastP, end: pt });
-            }
-            lastP = pt;
-          }
-        } else if (cmd === 'Q' || cmd === 'q') {
-          const isRel = cmd === 'q';
-          for (let i = 0; i < args.length; i += 4) {
-            if (i + 3 >= args.length) break;
-            let cx = args[i]; let cy = args[i+1];
-            let x = args[i+2]; let y = args[i+3];
-            if (isRel) { cx += currX; cy += currY; x += currX; y += currY; }
-            currX = x; currY = y;
-            const cpt = transform(cx, cy);
-            const pt = transform(x, y);
-            if (currentContour) {
-              currentContour.segments.push({ type: 'Q', start: lastP, end: pt, c1: cpt });
-            }
-            lastP = pt;
-          }
-        } else if (cmd === 'C' || cmd === 'c') {
-          const isRel = cmd === 'c';
-          for (let i = 0; i < args.length; i += 6) {
-            if (i + 5 >= args.length) break;
-            let cx1 = args[i]; let cy1 = args[i+1];
-            let cx2 = args[i+2]; let cy2 = args[i+3];
-            let x = args[i+4]; let y = args[i+5];
-            if (isRel) { cx1+=currX; cy1+=currY; cx2+=currX; cy2+=currY; x+=currX; y+=currY; }
-            currX = x; currY = y;
-            const c1 = transform(cx1, cy1);
-            const c2 = transform(cx2, cy2);
-            const pt = transform(x, y);
-            if (currentContour) {
-              currentContour.segments.push({ type: 'C', start: lastP, end: pt, c1, c2 });
-            }
-            lastP = pt;
-          }
-        } else if (cmd === 'Z' || cmd === 'z') {
-          currX = startX; currY = startY;
-          if (currentContour) {
-            currentContour.closed = true;
-            const startPt = currentContour.startPt;
-            if (Math.hypot(lastP.x - startPt.x, lastP.y - startPt.y) > 0.01) {
-              currentContour.segments.push({ type: 'L', start: lastP, end: startPt });
-            }
-            lastP = startPt;
+        } else if (item.children && item.children.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const child of item.children) {
+            traverseItem(child);
           }
         }
+      };
+
+      traverseItem(scope.project.activeLayer);
+      scope.project.clear();
+      scope.project.remove();
+    } catch (e) {
+      console.error("Paper.js makeExportPath processing failed:", e);
+    } finally {
+      if (canvas && canvas.parentNode) {
+        try { canvas.parentNode.removeChild(canvas); } catch (_) {}
       }
-      if (currentContour) contours.push(currentContour);
-
-      if (thickness > 0) {
-        contours.forEach((contour) => {
-          const pts: { x: number; y: number }[] = [];
-          pts.push({ x: contour.startPt.x, y: contour.startPt.y });
-          
-          contour.segments.forEach((seg) => {
-            if (seg.type === 'L') {
-              pts.push({ x: seg.end.x, y: seg.end.y });
-            } else if (seg.type === 'Q' && seg.c1) {
-              for (let step = 1; step <= 12; step++) {
-                const t = step / 12;
-                const u = 1 - t;
-                const nx = u * u * seg.start.x + 2 * u * t * seg.c1.x + t * t * seg.end.x;
-                const ny = u * u * seg.start.y + 2 * u * t * seg.c1.y + t * t * seg.end.y;
-                pts.push({ x: nx, y: ny });
-              }
-            } else if (seg.type === 'C' && seg.c1 && seg.c2) {
-              for (let step = 1; step <= 12; step++) {
-                const t = step / 12;
-                const u = 1 - t;
-                const nx = u * u * u * seg.start.x + 3 * u * u * t * seg.c1.x + 3 * u * t * t * seg.c2.x + t * t * t * seg.end.x;
-                const ny = u * u * u * seg.start.y + 3 * u * u * t * seg.c1.y + 3 * u * t * t * seg.c2.y + t * t * t * seg.end.y;
-                pts.push({ x: nx, y: ny });
-              }
-            }
-          });
-
-          const filteredPts: { x: number; y: number }[] = [];
-          pts.forEach((pt) => {
-            if (filteredPts.length === 0) {
-              filteredPts.push(pt);
-            } else {
-              const last = filteredPts[filteredPts.length - 1];
-              if (Math.hypot(pt.x - last.x, pt.y - last.y) > 0.1) {
-                filteredPts.push(pt);
-              }
-            }
-          });
-
-          const nPts = filteredPts.length;
-          if (nPts === 0) return;
-
-          const r = thickness / 2;
-          const k = r * 0.5522848;
-
-          if (nPts === 1) {
-            drawCircle(filteredPts[0].x, filteredPts[0].y, r, isWhite);
-            return;
-          }
-
-          const segNormals: { x: number; y: number }[] = [];
-          const segTangents: { x: number; y: number }[] = [];
-          for (let i = 0; i < nPts - 1; i++) {
-            const p1 = filteredPts[i];
-            const p2 = filteredPts[i + 1];
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const len = Math.hypot(dx, dy) || 1;
-            const tx = dx / len;
-            const ty = dy / len;
-            segTangents.push({ x: tx, y: ty });
-            segNormals.push({ x: -ty, y: tx });
-          }
-
-          const getLeftStart = (i: number) => {
-            const n = segNormals[i];
-            return { x: filteredPts[i].x + n.x * r, y: filteredPts[i].y + n.y * r };
-          };
-          const getLeftEnd = (i: number) => {
-            const n = segNormals[i];
-            return { x: filteredPts[i + 1].x + n.x * r, y: filteredPts[i + 1].y + n.y * r };
-          };
-          const getRightStart = (i: number) => {
-            const n = segNormals[i];
-            return { x: filteredPts[i].x - n.x * r, y: filteredPts[i].y - n.y * r };
-          };
-          const getRightEnd = (i: number) => {
-            const n = segNormals[i];
-            return { x: filteredPts[i + 1].x - n.x * r, y: filteredPts[i + 1].y - n.y * r };
-          };
-
-          if (isWhite) {
-            const startPt = getRightStart(0);
-            path.moveTo(startPt.x, startPt.y);
-
-            const p0 = filteredPts[0];
-            const t0 = segTangents[0];
-            const n0 = segNormals[0];
-            path.bezierCurveTo!(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
-            path.bezierCurveTo!(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
-
-            for (let i = 0; i < nPts - 1; i++) {
-              const ptStart = getLeftStart(i);
-              const ptEnd = getLeftEnd(i);
-              path.lineTo(ptStart.x, ptStart.y);
-              path.lineTo(ptEnd.x, ptEnd.y);
-            }
-
-            const pLast = filteredPts[nPts - 1];
-            const tLast = segTangents[nPts - 2];
-            const nLast = segNormals[nPts - 2];
-            path.bezierCurveTo!(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
-            path.bezierCurveTo!(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r + tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
-
-            for (let i = nPts - 2; i >= 0; i--) {
-              const ptEnd = getRightEnd(i);
-              const ptStart = getRightStart(i);
-              path.lineTo(ptEnd.x, ptEnd.y);
-              path.lineTo(ptStart.x, ptStart.y);
-            }
-          } else {
-            const startPt = getLeftStart(0);
-            path.moveTo(startPt.x, startPt.y);
-
-            for (let i = 0; i < nPts - 1; i++) {
-              const ptStart = getLeftStart(i);
-              const ptEnd = getLeftEnd(i);
-              path.lineTo(ptStart.x, ptStart.y);
-              path.lineTo(ptEnd.x, ptEnd.y);
-            }
-
-            const pLast = filteredPts[nPts - 1];
-            const tLast = segTangents[nPts - 2];
-            const nLast = segNormals[nPts - 2];
-            path.bezierCurveTo!(pLast.x + nLast.x * r + tLast.x * k, pLast.y + nLast.y * r + tLast.y * k, pLast.x + tLast.x * r + nLast.x * k, pLast.y + tLast.y * r + nLast.y * k, pLast.x + tLast.x * r, pLast.y + tLast.y * r);
-            path.bezierCurveTo!(pLast.x + tLast.x * r - nLast.x * k, pLast.y + tLast.y * r - nLast.y * k, pLast.x - nLast.x * r + tLast.x * k, pLast.y - nLast.y * r + tLast.y * k, pLast.x - nLast.x * r, pLast.y - nLast.y * r);
-
-            for (let i = nPts - 2; i >= 0; i--) {
-              const ptEnd = getRightEnd(i);
-              const ptStart = getRightStart(i);
-              path.lineTo(ptEnd.x, ptEnd.y);
-              path.lineTo(ptStart.x, ptStart.y);
-            }
-
-            const p0 = filteredPts[0];
-            const t0 = segTangents[0];
-            const n0 = segNormals[0];
-            path.bezierCurveTo!(p0.x - n0.x * r - t0.x * k, p0.y - n0.y * r - t0.y * k, p0.x - t0.x * r - n0.x * k, p0.y - t0.y * r - n0.y * k, p0.x - t0.x * r, p0.y - t0.y * r);
-            path.bezierCurveTo!(p0.x - t0.x * r + n0.x * k, p0.y - t0.y * r + n0.y * k, p0.x + n0.x * r - t0.x * k, p0.y + n0.y * r - t0.y * k, p0.x + n0.x * r, p0.y + n0.y * r);
-          }
-
-          path.close();
-        });
-      } else {
-        // 1. Build polygon point lists for each contour
-        const contourInfos = contours.map((contour) => {
-          const pts: { x: number; y: number }[] = [contour.startPt];
-          contour.segments.forEach((seg) => pts.push(seg.end));
-          
-          let signedArea = 0;
-          for (let i = 0; i < pts.length; i++) {
-            const j = (i + 1) % pts.length;
-            signedArea += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
-          }
-          signedArea /= 2;
-
-          const minX = Math.min(...pts.map(p => p.x));
-          const maxX = Math.max(...pts.map(p => p.x));
-          const minY = Math.min(...pts.map(p => p.y));
-          const maxY = Math.max(...pts.map(p => p.y));
-
-          // A background frame contour spans the full canvas width and height with 4-6 vertices
-          const isFrame = minX <= 180 && minY <= 100 && maxX >= 820 && maxY >= 780 && pts.length <= 8 && Math.abs(signedArea) > 300000;
-
-          return { contour, pts, signedArea, isFrame, minX, maxX, minY, maxY };
-        }).filter(info => info.contour.segments.length > 0 && !info.isFrame);
-
-        // 2. Determine nesting depth for each non-frame contour
-        contourInfos.forEach((info, idx) => {
-          const testPt = info.pts[0];
-          let nestingDepth = 0;
-          contourInfos.forEach((other, oIdx) => {
-            if (idx === oIdx) return;
-            if (info.minX >= other.minX && info.maxX <= other.maxX && info.minY >= other.minY && info.maxY <= other.maxY) {
-              let inside = false;
-              const oPts = other.pts;
-              for (let i = 0, j = oPts.length - 1; i < oPts.length; j = i++) {
-                const xi = oPts[i].x, yi = oPts[i].y;
-                const xj = oPts[j].x, yj = oPts[j].y;
-                const intersect = ((yi > testPt.y) !== (yj > testPt.y)) &&
-                  (testPt.x < (xj - xi) * (testPt.y - yi) / (yj - yi || 1) + xi);
-                if (intersect) inside = !inside;
-              }
-              if (inside) nestingDepth++;
-            }
-          });
-
-          // Odd nesting level or isWhite means this contour is an inner cutout (hole)
-          const shouldBeHole = isWhite || (nestingDepth % 2 === 1);
-          // Standard OpenType TrueType / Postscript contour winding order in Y-up space:
-          // Outer contours MUST be Counter-Clockwise (signedArea < 0 in standard shoe formula for Y-up points).
-          // Inner holes MUST be Clockwise (signedArea > 0).
-          const isReversed = shouldBeHole ? (info.signedArea < 0) : (info.signedArea > 0);
-
-          const contour = info.contour;
-          if (isReversed) {
-            const lastPt = contour.segments[contour.segments.length - 1].end;
-            path.moveTo(lastPt.x, lastPt.y);
-            for (let i = contour.segments.length - 1; i >= 0; i--) {
-              const seg = contour.segments[i];
-              if (seg.type === 'L') {
-                path.lineTo(seg.start.x, seg.start.y);
-              } else if (seg.type === 'Q' && seg.c1) {
-                if (path.quadraticCurveTo) path.quadraticCurveTo(seg.c1.x, seg.c1.y, seg.start.x, seg.start.y);
-                else path.lineTo(seg.start.x, seg.start.y);
-              } else if (seg.type === 'C' && seg.c1 && seg.c2) {
-                if (path.bezierCurveTo) path.bezierCurveTo(seg.c2.x, seg.c2.y, seg.c1.x, seg.c1.y, seg.start.x, seg.start.y);
-                else path.lineTo(seg.start.x, seg.start.y);
-              }
-            }
-            if (contour.closed) path.close();
-          } else {
-            path.moveTo(contour.startPt.x, contour.startPt.y);
-            contour.segments.forEach((seg) => {
-              if (seg.type === 'L') {
-                path.lineTo(seg.end.x, seg.end.y);
-              } else if (seg.type === 'Q' && seg.c1) {
-                if (path.quadraticCurveTo) path.quadraticCurveTo(seg.c1.x, seg.c1.y, seg.end.x, seg.end.y);
-                else path.lineTo(seg.end.x, seg.end.y);
-              } else if (seg.type === 'C' && seg.c1 && seg.c2) {
-                if (path.bezierCurveTo) path.bezierCurveTo(seg.c1.x, seg.c1.y, seg.c2.x, seg.c2.y, seg.end.x, seg.end.y);
-                else path.lineTo(seg.end.x, seg.end.y);
-              }
-            });
-            if (contour.closed) path.close();
-          }
-        });
+      if (savedProject) {
+        try { savedProject.activate(); } catch (_) {}
       }
-    };
-
-    // 4. Paths
-    const pathTags = art.svg.match(/<path[^>]*>/gi) || [];
-    for (const tag of pathTags) {
-      const dMatch = tag.match(/d=["']([^"']+)["']/i);
-      if (!dMatch) continue;
-      const d = dMatch[1];
-      
-      const isStrokeOnly = (tag.includes('fill="none"') || tag.includes("fill='none'")) && !tag.includes('fill-rule="evenodd"');
-      const swMatch = tag.match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
-      const thickness = (isStrokeOnly && swMatch) ? Number(swMatch[1]) * scale : 0;
-      const isWhite = checkIsWhite(tag);
-      
-      parsePathD(d, thickness, isWhite);
-      drew = true;
-    }
-
-    // 5. Polygons
-    const polygonTags = art.svg.match(/<polygon[^>]*>/gi) || [];
-    for (const tag of polygonTags) {
-      const ptsMatch = tag.match(/points=["']([^"']+)["']/i);
-      if (!ptsMatch) continue;
-      const coords = ptsMatch[1].trim().split(/[\s,]+/).map(Number);
-      if (coords.length < 4 || coords.some(isNaN)) continue;
-      
-      let d = `M ${coords[0]} ${coords[1]}`;
-      for (let i = 2; i < coords.length; i += 2) {
-        if (i + 1 >= coords.length) break;
-        d += ` L ${coords[i]} ${coords[i+1]}`;
-      }
-      d += " Z";
-      
-      const isWhite = checkIsWhite(tag);
-      parsePathD(d, 0, isWhite);
-      drew = true;
-    }
-
-    // 6. Polylines
-    const polylineTags = art.svg.match(/<polyline[^>]*>/gi) || [];
-    for (const tag of polylineTags) {
-      const ptsMatch = tag.match(/points=["']([^"']+)["']/i);
-      if (!ptsMatch) continue;
-      const coords = ptsMatch[1].trim().split(/[\s,]+/).map(Number);
-      if (coords.length < 4 || coords.some(isNaN)) continue;
-      
-      let d = `M ${coords[0]} ${coords[1]}`;
-      for (let i = 2; i < coords.length; i += 2) {
-        if (i + 1 >= coords.length) break;
-        d += ` L ${coords[i]} ${coords[i+1]}`;
-      }
-      
-      const swMatch = tag.match(/stroke-?width=["']?(\d*\.?\d+)["']?/i);
-      const sw = swMatch ? Number(swMatch[1]) * scale : 10 * scale;
-      const isWhite = checkIsWhite(tag);
-      parsePathD(d, sw, isWhite);
-      drew = true;
-    }
-
-    if (!drew && art.svg) {
-      const seed = fallbackGlyph.charCodeAt(0);
-      const width = 70 + (seed % 3) * 34;
-      const height = 520 + (seed % 4) * 36;
-      addRectToPath(path, 190, 720, width, 95);
-      addRectToPath(path, 190, 720, 95, height);
-      addRectToPath(path, 190, 280, width + 180, 95);
-      if (seed % 2 === 0) addRectToPath(path, 460, 720, 95, height);
     }
 
     return path;
@@ -2924,8 +2442,8 @@ function MainApp() {
       const art = glyphMap[glyph] ?? emptyGlyph();
       let resolvedSvg = art.svg || "";
 
-      if (resolvedSvg.includes("<image ") || resolvedSvg.includes("<image\n")) {
-        const imageMatch = resolvedSvg.match(/<image[^>]*href=["']([^"']+)["']/i);
+      if (resolvedSvg.includes("<image ") || resolvedSvg.includes("<image\n") || resolvedSvg.includes("<image\r")) {
+        const imageMatch = resolvedSvg.match(/<image[^>]*(?:href|xlink:href)=["']([^"']+)["']/i);
         if (imageMatch) {
           const imgUrl = imageMatch[1];
           const tracedSvg = await autoVectorizeImageUrl(imgUrl);

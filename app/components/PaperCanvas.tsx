@@ -91,11 +91,20 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
       if (normalized !== currentSVG) {
         scopeRef.current.activate();
         scopeRef.current.project.clear();
+        
+        const oldZoom = scopeRef.current.view.zoom;
+        const oldCenter = scopeRef.current.view.center;
+        scopeRef.current.view.zoom = 1;
+        scopeRef.current.view.center = new scopeRef.current.Point(500, 500);
+
         scopeRef.current.project.importSVG(normalized, {
           insert: true,
           expandShapes: true,
           applyMatrix: true,
         });
+
+        scopeRef.current.view.zoom = oldZoom;
+        scopeRef.current.view.center = oldCenter;
       }
     }
   }, [initialSvg]);
@@ -104,11 +113,19 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     if (!scopeRef.current) return;
     scopeRef.current.project.clear();
     if (svgString) {
+      const oldZoom = scopeRef.current.view.zoom;
+      const oldCenter = scopeRef.current.view.center;
+      scopeRef.current.view.zoom = 1;
+      scopeRef.current.view.center = new scopeRef.current.Point(500, 500);
+
       scopeRef.current.project.importSVG(svgString, {
         insert: true,
         expandShapes: true,
         applyMatrix: true,
       });
+
+      scopeRef.current.view.zoom = oldZoom;
+      scopeRef.current.view.center = oldCenter;
     }
     isInternalChangeRef.current = true;
     if (onModificationRef.current) onModificationRef.current();
@@ -117,9 +134,22 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
   useImperativeHandle(ref, () => ({
     exportSVG: () => {
       if (!scopeRef.current) return '';
+      
+      // Temporarily reset view zoom to 1 to avoid exporting zoomed coordinates
+      const oldZoom = scopeRef.current.view.zoom;
+      const oldCenter = scopeRef.current.view.center;
+      scopeRef.current.view.zoom = 1;
+      scopeRef.current.view.center = new scopeRef.current.Point(500, 500);
+
       const svgNode = scopeRef.current.project.exportSVG({ 
-        asString: false
+        asString: false,
+        bounds: new scopeRef.current.Rectangle(0, 0, 1000, 1000)
       }) as SVGElement;
+
+      // Restore view
+      scopeRef.current.view.zoom = oldZoom;
+      scopeRef.current.view.center = oldCenter;
+
       svgNode.setAttribute('viewBox', '0 0 1000 1000');
       svgNode.setAttribute('width', '1000');
       svgNode.setAttribute('height', '1000');
@@ -175,11 +205,16 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const scope = new paper.PaperScope();
-    scope.setup(canvasRef.current);
-    scopeRef.current = scope;
     
-    scope.view.onResize = () => {
+    if (!scopeRef.current) {
+      const scope = new paper.PaperScope();
+      scope.setup(canvasRef.current);
+      // FORCE exactly 1000x1000 internal resolution, bypassing CSS layout size
+      scope.project.view.viewSize = new paper.Size(1000, 1000);
+      scopeRef.current = scope;
+    }
+    
+    scopeRef.current.view.onResize = () => {
       updateView();
     };
     updateView();
@@ -550,8 +585,9 @@ const PaperCanvas = forwardRef<PaperCanvasRef, PaperCanvasProps>(({
     <div style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 50 }}>
       <canvas 
         ref={canvasRef} 
+        width="1000"
+        height="1000"
         style={{ width: '100%', height: '100%', display: 'block', background: 'transparent', touchAction: 'none' }} 
-        data-paper-resize="true" 
       />
     </div>
   );
